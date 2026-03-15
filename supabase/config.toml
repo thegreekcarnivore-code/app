@@ -1,4 +1,75 @@
-project_id = "gbkbkdkokprifnxkfuce"
+project_id = "lglgmhzgxyvyftdhvdsy"
 
-[functions.chat]
-verify_jwt = false
+[functions]
+  [functions.analyze-client]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.concierge-chat]
+    verify_jwt = false
+  [functions.explore-activities]
+    verify_jwt = false
+  [functions.geocode]
+    verify_jwt = false
+  [functions.place-photo]
+    verify_jwt = false
+  [functions.process-program-automations]
+    verify_jwt = false
+  [functions.recommend-restaurants]
+    verify_jwt = false
+  [functions.send-invite]
+    verify_jwt = false
+  [functions.delete-user]
+    verify_jwt = false
+  [functions.generate-note-title]
+    verify_jwt = false
+  [functions.distribute-messages]
+    verify_jwt = false
+  [functions.personalize-messages]
+    verify_jwt = false
+  [functions.create-zoom-meeting]
+    verify_jwt = false
+  [functions.analyze-call-transcript]
+    verify_jwt = false
+  [functions.notify-call-participants]
+    verify_jwt = false
+  [functions.analyze-food-photo]
+    verify_jwt = false
+  [functions.generate-motivation]
+    verify_jwt = false
+  [functions.parse-measurements]
+    verify_jwt = false
+  [functions.check-client-compliance]
+    verify_jwt = false
+  [functions.send-day-zero-messages]
+    verify_jwt = false
+  [functions.send-enrollment-welcome]
+    verify_jwt = false
+  [functions.transcribe-audio]
+    verify_jwt = false
+  [functions.app-help-chat]
+    verify_jwt = false
+  [functions.send-push-notification]
+    verify_jwt = false
+  [functions.process-call-reminders]
+    verify_jwt = false
+  [functions.process-program-automations]
+    verify_jwt = false
+  [functions.send-reconnect-email]
+    verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
+  [functions.send-program-offer]
+    verify_jwt = false
+  [functions.transcribe-voice-input]
+    verify_jwt = false
+  [functions.transcribe-receipt]
+    verify_jwt = false
+  [functions.send-message-email]
+    verify_jwt = false
+  [functions.sync-finance-sheets]
+    verify_jwt = false
+  [functions.import-finance-sheets]
+    verify_jwt = false

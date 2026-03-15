@@ -1,0 +1,1 @@
+ALTER TABLE public.video_calls ADD COLUMN guest_emails text[] NOT NULL DEFAULT '{}'::text[];

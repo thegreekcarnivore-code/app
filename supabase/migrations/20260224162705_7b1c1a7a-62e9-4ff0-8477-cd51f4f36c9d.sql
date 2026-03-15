@@ -1,0 +1,1 @@
+ALTER TABLE public.client_program_enrollments ADD COLUMN feature_access_override jsonb DEFAULT NULL;

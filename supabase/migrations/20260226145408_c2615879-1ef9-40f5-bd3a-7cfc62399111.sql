@@ -1,0 +1,1 @@
+ALTER TABLE public.program_videos ADD COLUMN thumbnail_url TEXT;

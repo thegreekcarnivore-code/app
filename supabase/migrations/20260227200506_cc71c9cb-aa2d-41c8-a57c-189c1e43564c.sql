@@ -1,0 +1,1 @@
+ALTER TABLE public.video_modules ADD COLUMN unlock_after_days integer DEFAULT NULL;

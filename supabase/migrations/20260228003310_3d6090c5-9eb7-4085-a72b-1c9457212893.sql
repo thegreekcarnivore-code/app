@@ -1,0 +1,1 @@
+ALTER TABLE public.recipes ADD COLUMN category text NOT NULL DEFAULT 'carnivore';

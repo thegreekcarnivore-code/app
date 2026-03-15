@@ -1,0 +1,1 @@
+ALTER TABLE public.client_program_enrollments ADD COLUMN duration_weeks_override integer DEFAULT NULL;

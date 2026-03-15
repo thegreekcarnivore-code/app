@@ -1,0 +1,1 @@
+ALTER TABLE public.email_invitations ADD COLUMN resent_at timestamp with time zone DEFAULT NULL;
