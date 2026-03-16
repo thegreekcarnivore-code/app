@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw } from "lucide-react";
+import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
@@ -20,6 +20,7 @@ import ClientProgramDialog from "@/components/ClientProgramDialog";
 import EditEnrollmentDialog from "@/components/admin/EditEnrollmentDialog";
 import ApproveUserDialog from "@/components/admin/ApproveUserDialog";
 import EditFeatureAccessDialog from "@/components/admin/EditFeatureAccessDialog";
+import EditClientDialog from "@/components/admin/EditClientDialog";
 import VideoCallsPanel from "@/components/admin/VideoCallsPanel";
 import ClientCategoriesPanel from "@/components/admin/ClientCategoriesPanel";
 import AdminTodoPanel from "@/components/admin/AdminTodoPanel";
@@ -113,9 +114,11 @@ const Admin = () => {
   const [selectedNotesUserId, setSelectedNotesUserId] = useState<string | null>(null);
   const [selectedReportUserId, setSelectedReportUserId] = useState<string | null>(null);
   const [selectedProgramUserId, setSelectedProgramUserId] = useState<string | null>(null);
+  const [editClientUserId, setEditClientUserId] = useState<string | null>(null);
   const selectedNotesUser = users.find(u => u.id === selectedNotesUserId);
   const selectedReportUser = users.find(u => u.id === selectedReportUserId);
   const selectedProgramUser = users.find(u => u.id === selectedProgramUserId);
+  const editClientUser = users.find(u => u.id === editClientUserId);
   const [editEnrollmentUserId, setEditEnrollmentUserId] = useState<string | null>(null);
   const editEnrollmentUser = users.find(u => u.id === editEnrollmentUserId);
   const [approveUserId, setApproveUserId] = useState<string | null>(null);
@@ -738,6 +741,10 @@ const Admin = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      <IconButtonWithTooltip tooltip="Edit Client" onClick={() => setEditClientUserId(u.id)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-primary hover:bg-primary/20 transition-colors">
+                        <Pencil className="h-4 w-4" />
+                        <span className="text-[10px] font-medium">Edit</span>
+                      </IconButtonWithTooltip>
                       <IconButtonWithTooltip tooltip="View Data" onClick={() => navigate(`/admin/client/${u.id}?view=data`)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-primary hover:bg-primary/20 transition-colors">
                         <Ruler className="h-4 w-4" />
                         <span className="text-[10px] font-medium">Data</span>
@@ -900,6 +907,16 @@ const Admin = () => {
           onOpenChange={(open) => !open && setEditAccessUserId(null)}
           userId={editAccessUserId}
           userEmail={editAccessUser?.email || "Client"}
+        />
+      )}
+
+      {editClientUserId && (
+        <EditClientDialog
+          open={!!editClientUserId}
+          onOpenChange={(open) => !open && setEditClientUserId(null)}
+          userId={editClientUserId}
+          userEmail={editClientUser?.email || "Client"}
+          onSaved={() => fetchUsers()}
         />
       )}
 
