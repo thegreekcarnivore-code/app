@@ -278,7 +278,7 @@ const Resources = () => {
           </p>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-sans font-medium text-foreground">
-              {recipeBooks.length} {isGreek ? "βιβλία" : "books"}
+              {categoryLabels.length} {isGreek ? "βιβλία" : "books"}
             </span>
             <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-sans font-medium text-foreground">
               {totalRecipes} {isGreek ? "συνταγές" : "recipes"}
