@@ -5,6 +5,7 @@ import {
   createOpenAIChatCompletion,
   getOpenAIModel,
 } from "../_shared/openai.ts";
+import { generateWeeklyCheckIn } from "../_shared/weekly-checkins.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +43,22 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!adminRole) throw new Error("Admin access required");
+
+    if (mode === "weekly") {
+      const weeklyCheckIn = await generateWeeklyCheckIn({
+        adminClient,
+        userId,
+        lang,
+      });
+
+      return new Response(JSON.stringify({
+        report: weeklyCheckIn.report,
+        clientMessage: weeklyCheckIn.coachMessage,
+        summary: weeklyCheckIn.summary,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Date filter for weekly mode
     const isWeekly = mode === "weekly";

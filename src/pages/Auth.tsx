@@ -104,8 +104,29 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const trustSteps = [
+    {
+      title: lang === "el" ? "1. Δημιούργησε πρόσβαση" : "1. Create your access",
+      body: lang === "el"
+        ? "Χρησιμοποίησε το email σου για σύνδεση ή αίτημα πρόσβασης."
+        : "Use your email to sign in or request access.",
+    },
+    {
+      title: lang === "el" ? "2. Ο coach εγκρίνει" : "2. Coach approval",
+      body: lang === "el"
+        ? "Οι νέοι λογαριασμοί περνούν από approval πριν ανοίξει το πρόγραμμα."
+        : "New accounts go through approval before the program opens.",
+    },
+    {
+      title: lang === "el" ? "3. Ξεκινά το onboarding" : "3. Guided onboarding starts",
+      body: lang === "el"
+        ? "Υπογραφή, υλικό προγράμματος και καθημερινό dashboard εμφανίζονται με σωστή σειρά."
+        : "Signing, program material, and the daily dashboard appear in the right order.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6 relative overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6 py-10">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(var(--beige))_0%,_hsl(var(--beige-dark)/0.3)_100%)]" />
 
       <div className="fixed top-4 right-4 z-50">
@@ -115,78 +136,166 @@ const Auth = () => {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm space-y-8 relative z-10">
-        <div className="space-y-1 text-center">
-          <img src={logo} alt="The Greek Carnivore" className="mx-auto h-24 w-auto object-contain" />
-          <h1 className="font-serif text-xl font-semibold text-foreground mt-2">{t("appName")}</h1>
-          <p className="text-[10px] font-sans uppercase tracking-[0.25em] text-gold font-medium">{t("subtitle")}</p>
-          {inviteToken && (
-            <p className="font-sans text-sm text-gold mt-2">
-              {lang === "el" ? "🎉 Έχετε πρόσκληση! Δημιουργήστε λογαριασμό." : "🎉 You've been invited! Create your account."}
-            </p>
-          )}
-          <p className="font-sans text-sm text-muted-foreground mt-3 leading-relaxed">
-            {forgotMode
-              ? (lang === "el" ? "Εισάγετε το email σας για επαναφορά κωδικού" : "Enter your email to reset your password")
-              : isLogin ? t("signInToContinue") : t("createAccount")}
-          </p>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 grid w-full max-w-5xl gap-6 lg:grid-cols-[1.1fr,0.9fr]"
+      >
+        <div className="hidden rounded-[2rem] border border-border/60 bg-card/80 p-8 shadow-lg shadow-black/5 backdrop-blur lg:block">
+          <div className="space-y-5">
+            <img src={logo} alt="The Greek Carnivore" className="h-24 w-auto object-contain" />
+            <div className="space-y-3">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold">
+                {lang === "el" ? "Coaching portal" : "Coaching portal"}
+              </p>
+              <h1 className="font-serif text-4xl font-semibold leading-tight text-foreground">
+                {lang === "el"
+                  ? "Το καθημερινό σου coaching σε ένα καθαρό σύστημα."
+                  : "Your daily coaching, in one cleaner system."}
+              </h1>
+              <p className="max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
+                {lang === "el"
+                  ? "Μετρήσεις, καθημερινά βήματα, υλικό προγράμματος και επικοινωνία με τον coach λειτουργούν μαζί, όχι σαν ξεχωριστά εργαλεία."
+                  : "Measurements, daily actions, program support, and coach communication work together instead of feeling like separate tools."}
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {trustSteps.map((step) => (
+                <div key={step.title} className="rounded-[1.5rem] border border-border/60 bg-background/75 p-4">
+                  <p className="font-serif text-lg font-semibold text-foreground">{step.title}</p>
+                  <p className="mt-1 font-sans text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {forgotMode ? (
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
-              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+        <div className="space-y-5 rounded-[2rem] border border-border/60 bg-card/90 p-6 shadow-lg shadow-black/5 backdrop-blur sm:p-8">
+          <div className="space-y-3 text-center">
+            <img src={logo} alt="The Greek Carnivore" className="mx-auto h-24 w-auto object-contain" />
+            <div className="space-y-1">
+              <h1 className="font-serif text-2xl font-semibold text-foreground">{t("appName")}</h1>
+              <p className="text-[10px] font-sans font-medium uppercase tracking-[0.25em] text-gold">{t("subtitle")}</p>
             </div>
-            <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-4 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">
-              {loading ? t("pleaseWait") : (lang === "el" ? "Αποστολή Συνδέσμου" : "Send Reset Link")}
-            </button>
-            <p className="text-center">
-              <button type="button" onClick={() => setForgotMode(false)} className="inline-flex items-center gap-1 font-sans text-xs text-gold hover:underline font-medium">
-                <ArrowLeft className="h-3 w-3" />
-                {lang === "el" ? "Πίσω στη σύνδεση" : "Back to sign in"}
-              </button>
+            <p className="font-sans text-sm leading-relaxed text-muted-foreground">
+              {forgotMode
+                ? (lang === "el" ? "Εισάγετε το email σας για να λάβετε σύνδεσμο επαναφοράς." : "Enter your email to receive a reset link.")
+                : isLogin
+                  ? (lang === "el" ? "Συνδέσου για να συνεχίσεις στο πρόγραμμα και στο καθημερινό σου dashboard." : "Sign in to continue to your program and daily dashboard.")
+                  : inviteToken
+                    ? (lang === "el" ? "Η πρόσκλησή σου είναι έτοιμη. Δημιούργησε τον λογαριασμό σου για να ενεργοποιηθεί η πρόσβαση." : "Your invite is ready. Create your account to activate access.")
+                    : (lang === "el" ? "Αν έχεις εγκριθεί από τον coach, δημιούργησε λογαριασμό για να ξεκινήσει το onboarding." : "If you have been approved by your coach, create your account to start onboarding.")}
             </p>
-          </form>
-        ) : (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
-                  <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("passwordPlaceholder")} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              {!isLogin && (
-                <p className="text-[11px] text-muted-foreground font-sans pl-1 -mt-1">{t("passwordRequirement")}</p>
-              )}
-              {isLogin && (
-                <p className="text-right">
-                  <button type="button" onClick={() => setForgotMode(true)} className="font-sans text-xs text-muted-foreground hover:text-gold transition-colors">
-                    {lang === "el" ? "Ξεχάσατε τον κωδικό;" : "Forgot password?"}
-                  </button>
-                </p>
-              )}
-              <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-4 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">
-                {loading ? t("pleaseWait") : isLogin ? t("signIn") : t("signUp")}
-              </button>
-            </form>
+          </div>
 
-            <p className="text-center font-sans text-xs text-muted-foreground">
-              {isLogin ? t("noAccount") : t("haveAccount")}{" "}
-              <button onClick={() => setIsLogin(!isLogin)} className="text-gold hover:underline font-medium">
-                {isLogin ? t("signUp").toLowerCase() : t("signIn").toLowerCase()}
+          {!forgotMode && (
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-background/70 p-1">
+              <button
+                type="button"
+                onClick={() => setIsLogin(true)}
+                className={`rounded-[1rem] px-4 py-2.5 font-sans text-sm font-medium transition-all ${isLogin ? "bg-gold text-gold-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {lang === "el" ? "Σύνδεση" : "Sign in"}
               </button>
-            </p>
-          </>
-        )}
+              <button
+                type="button"
+                onClick={() => setIsLogin(false)}
+                className={`rounded-[1rem] px-4 py-2.5 font-sans text-sm font-medium transition-all ${!isLogin ? "bg-gold text-gold-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {inviteToken ? (lang === "el" ? "Ενεργοποίηση" : "Activate access") : (lang === "el" ? "Αίτημα πρόσβασης" : "Request access")}
+              </button>
+            </div>
+          )}
+
+          {inviteToken && !forgotMode && (
+            <div className="rounded-[1.5rem] border border-gold/25 bg-gold/10 px-4 py-3 text-left">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+                {lang === "el" ? "Πρόσκληση" : "Invite ready"}
+              </p>
+              <p className="mt-1 font-sans text-sm text-foreground">
+                {lang === "el" ? "Ο λογαριασμός σου θα συνδεθεί αυτόματα με την πρόσκληση μόλις ολοκληρώσεις την εγγραφή." : "Your account will be linked to the invite automatically as soon as sign-up is complete."}
+              </p>
+            </div>
+          )}
+
+          {forgotMode ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
+                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+              </div>
+              <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-4 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">
+                {loading ? t("pleaseWait") : (lang === "el" ? "Αποστολή συνδέσμου" : "Send reset link")}
+              </button>
+              <p className="text-center">
+                <button type="button" onClick={() => setForgotMode(false)} className="inline-flex items-center gap-1 font-sans text-xs font-medium text-gold hover:underline">
+                  <ArrowLeft className="h-3 w-3" />
+                  {lang === "el" ? "Πίσω στη σύνδεση" : "Back to sign in"}
+                </button>
+              </p>
+            </form>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
+                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                  </div>
+                  <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
+                    <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("passwordPlaceholder")} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="shrink-0 text-muted-foreground transition-colors hover:text-foreground">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <div className="space-y-2 rounded-[1.5rem] border border-border/60 bg-background/70 px-4 py-3">
+                    <p className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+                      {lang === "el" ? "Τι γίνεται μετά" : "What happens next"}
+                    </p>
+                    <p className="font-sans text-xs leading-relaxed text-muted-foreground">
+                      {inviteToken
+                        ? (lang === "el" ? "Η πρόσκλησή σου θα ενεργοποιηθεί, θα μπεις στην εφαρμογή και θα ξεκινήσει η guided ροή setup." : "Your invite will activate, the app will open, and the guided setup flow will begin.")
+                        : (lang === "el" ? "Ο λογαριασμός σου περνάει από approval και μετά ανοίγει το onboarding, το policy signing και το dashboard σου." : "Your account goes through approval and then unlocks onboarding, policy signing, and your daily dashboard.")}
+                    </p>
+                    <p className="font-sans text-[11px] text-muted-foreground">{t("passwordRequirement")}</p>
+                  </div>
+                )}
+
+                {isLogin && (
+                  <p className="text-right">
+                    <button type="button" onClick={() => setForgotMode(true)} className="font-sans text-xs text-muted-foreground transition-colors hover:text-gold">
+                      {lang === "el" ? "Ξεχάσατε τον κωδικό;" : "Forgot password?"}
+                    </button>
+                  </p>
+                )}
+
+                <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-4 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">
+                  {loading
+                    ? t("pleaseWait")
+                    : isLogin
+                      ? t("signIn")
+                      : inviteToken
+                        ? (lang === "el" ? "Ενεργοποίηση λογαριασμού" : "Activate account")
+                        : (lang === "el" ? "Υποβολή πρόσβασης" : "Request access")}
+                </button>
+              </form>
+
+              <p className="text-center font-sans text-xs text-muted-foreground">
+                {isLogin ? t("noAccount") : t("haveAccount")}{" "}
+                <button onClick={() => setIsLogin(!isLogin)} className="font-medium text-gold hover:underline">
+                  {isLogin
+                    ? (lang === "el" ? "ζήτησε πρόσβαση" : "request access")
+                    : t("signIn").toLowerCase()}
+                </button>
+              </p>
+            </>
+          )}
+        </div>
       </motion.div>
     </div>
   );

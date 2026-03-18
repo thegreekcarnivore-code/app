@@ -46,6 +46,24 @@ const Discover = () => {
 
   const hasAccess = (key: string) => isAdmin || featureAccess[key] !== false;
   const visibleTabs = TAB_CONFIG.filter((t) => hasAccess(t.featureKey));
+  const tabDescriptions: Record<DiscoverTab, { en: string; el: string }> = {
+    restaurant: {
+      en: "Find restaurant options that fit the plan when you are eating out.",
+      el: "Βρες επιλογές εστιατορίου που ταιριάζουν στο πλάνο όταν τρως έξω.",
+    },
+    delivery: {
+      en: "Use delivery strategically instead of breaking your rhythm.",
+      el: "Χρησιμοποίησε το delivery στρατηγικά χωρίς να χαλάς τον ρυθμό σου.",
+    },
+    explore: {
+      en: "Keep movement, activities, and lifestyle choices aligned with the goal.",
+      el: "Κράτησε κίνηση, δραστηριότητες και lifestyle επιλογές ευθυγραμμισμένες με τον στόχο.",
+    },
+    shopping: {
+      en: "Make shopping decisions that support execution during the week.",
+      el: "Κάνε αγορές που στηρίζουν την εκτέλεση μέσα στην εβδομάδα.",
+    },
+  };
 
   if (activeTab) {
     return (
@@ -80,16 +98,21 @@ const Discover = () => {
 
   return (
     <div className="pt-14 pb-24 px-5 space-y-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h1 className="font-serif text-xl font-semibold text-foreground">
-          {isGreek ? "Ανακαλύψτε" : "Discover"}
-        </h1>
-        <p className="font-sans text-xs text-muted-foreground mt-1">
-          {isGreek
-            ? "Εστιατόρια, delivery, δραστηριότητες & ψώνια"
-            : "Restaurants, delivery, activities & shopping"}
-        </p>
-      </motion.div>
+      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-5 shadow-sm">
+        <div className="space-y-3">
+          <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+            {isGreek ? "Υποστήριξη εκτός σπιτιού" : "Out-of-home support"}
+          </p>
+          <h1 className="font-serif text-2xl font-semibold text-foreground">
+            {isGreek ? "Κράτα το πρόγραμμα μαζί σου" : "Keep the program with you"}
+          </h1>
+          <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
+            {isGreek
+              ? "Το Discover υπάρχει για τις στιγμές που η καθημερινότητα σε βγάζει εκτός ρουτίνας. Εστιατόρια, delivery, δραστηριότητες και αγορές μπαίνουν στην υπηρεσία του πλάνου σου."
+              : "Discover exists for the moments when daily life pulls you out of routine. Restaurants, delivery, activities, and shopping become tools that support your plan instead of competing with it."}
+          </p>
+        </div>
+      </motion.section>
 
       <div className="grid grid-cols-2 gap-3">
         {visibleTabs.map((tab, i) => {
@@ -102,14 +125,19 @@ const Discover = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.05 }}
               onClick={() => setActiveTab(tab.key)}
-              className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card p-6 hover:border-gold/40 hover:shadow-md transition-all group"
+              className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left hover:border-gold/40 hover:shadow-md transition-all group"
             >
               <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
                 <Icon className="h-6 w-6 text-gold" />
               </div>
-              <span className="font-sans text-sm font-medium text-foreground">
-                {isGreek ? tab.labelEl : tab.labelEn}
-              </span>
+              <div className="space-y-1">
+                <p className="font-serif text-base font-semibold text-foreground">
+                  {isGreek ? tab.labelEl : tab.labelEn}
+                </p>
+                <p className="font-sans text-xs leading-relaxed text-muted-foreground">
+                  {tabDescriptions[tab.key][lang]}
+                </p>
+              </div>
             </motion.button>
           );
         })}

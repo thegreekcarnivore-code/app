@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { ListTodo, ChevronRight } from "lucide-react";
 import TaskDrawer from "./TaskDrawer";
 
 const TaskNotificationBanner = () => {
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const [pendingCount, setPendingCount] = useState(0);
   const [latestTask, setLatestTask] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -32,14 +34,27 @@ const TaskNotificationBanner = () => {
     <>
       <button
         onClick={() => setDrawerOpen(true)}
-        className="w-full flex items-center gap-3 rounded-xl border border-gold/30 bg-gold/10 px-4 py-2.5 mb-4 transition-colors hover:bg-gold/20"
+        className="mb-4 flex w-full items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-card/90 px-4 py-3 text-left shadow-sm transition-all hover:border-gold/35 hover:bg-gold/5"
       >
-        <ListTodo className="h-4 w-4 text-gold flex-shrink-0" />
+        <div className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gold/10 text-gold">
+          <ListTodo className="h-4 w-4" />
+        </div>
         <div className="flex-1 text-left">
-          <p className="font-sans text-xs font-medium text-foreground">
-            {pendingCount} pending task{pendingCount !== 1 ? "s" : ""}
+          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+            {lang === "el" ? "Σημερινές εκκρεμότητες" : "Today's follow-up"}
           </p>
-          {latestTask && <p className="font-sans text-[10px] text-muted-foreground truncate">{latestTask}</p>}
+          <p className="mt-1 font-serif text-base font-semibold text-foreground">
+            {lang === "el"
+              ? `${pendingCount} ${pendingCount === 1 ? "ενέργεια χρειάζεται" : "ενέργειες χρειάζονται"} προσοχή`
+              : `${pendingCount} ${pendingCount === 1 ? "action needs" : "actions need"} attention`}
+          </p>
+          <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">
+            {latestTask
+              ? latestTask
+              : lang === "el"
+                ? "Άνοιξε τη λίστα για να δεις τι πρέπει να κλείσει σήμερα."
+                : "Open the task list to see what should be closed today."}
+          </p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </button>

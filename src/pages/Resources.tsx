@@ -229,6 +229,16 @@ const Resources = () => {
   };
 
   const categories = [...new Set(documents.map((d) => d.category))];
+  const totalRecipes = recipes.length;
+  const totalDocuments = documents.length;
+
+  const resolveThemeColor = (value: string) => {
+    if (!value) return "hsl(var(--muted))";
+    if (value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl") || value.startsWith("var(")) {
+      return value;
+    }
+    return `hsl(var(--${value}))`;
+  };
 
   // Group recipes by category
   const grouped = recipes.reduce<Record<string, Recipe[]>>((acc, r) => {
@@ -240,27 +250,45 @@ const Resources = () => {
 
   return (
     <div className="pt-16 pb-4 space-y-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="font-serif text-xl font-semibold text-foreground">
-            {isGreek ? "Συνταγές" : "Recipes"}
-          </h1>
-          {isAdmin && (
-            <button
-              onClick={() => setShowBookManager(!showBookManager)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-sans font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              {isGreek ? "Βιβλία" : "Books"}
-            </button>
-          )}
+      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-5 shadow-sm">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+                {isGreek ? "Υλικό υποστήριξης" : "Support library"}
+              </p>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">
+                {isGreek ? "Συνταγές και υλικό προγράμματος" : "Recipes and program support"}
+              </h1>
+            </div>
+            {isAdmin && (
+              <button
+                onClick={() => setShowBookManager(!showBookManager)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-sans font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                {isGreek ? "Βιβλία" : "Books"}
+              </button>
+            )}
+          </div>
+          <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
+            {isGreek
+              ? "Χρησιμοποίησε τη βιβλιοθήκη όταν χρειάζεσαι κάτι πρακτικό για να εκτελέσεις καλύτερα το πλάνο σου: συνταγές, documents και υποστηρικτικό υλικό."
+              : "Use the library when you need something practical to execute the plan better: recipes, documents, and support material."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-sans font-medium text-foreground">
+              {recipeBooks.length} {isGreek ? "βιβλία" : "books"}
+            </span>
+            <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-sans font-medium text-foreground">
+              {totalRecipes} {isGreek ? "συνταγές" : "recipes"}
+            </span>
+            <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-sans font-medium text-foreground">
+              {totalDocuments} {isGreek ? "έγγραφα" : "documents"}
+            </span>
+          </div>
         </div>
-        <p className="font-sans text-xs text-muted-foreground">
-          {isGreek
-            ? "Συνταγές και υλικό για το πρόγραμμά σας"
-            : "Recipes and resources for your program"}
-        </p>
-      </motion.div>
+      </motion.section>
 
       {/* ── Favorites toggle ── */}
       {!selectedBook && favoriteIds.size > 0 && (
@@ -387,7 +415,12 @@ const Resources = () => {
                         {book.cover_image_url ? (
                           <img src={book.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         ) : (
-                          <div className={`w-full h-full bg-gradient-to-br from-${book.color_from} to-${book.color_to} flex items-center justify-center`}>
+                          <div
+                            className="flex h-full w-full items-center justify-center"
+                            style={{
+                              backgroundImage: `linear-gradient(135deg, ${resolveThemeColor(book.color_from)}, ${resolveThemeColor(book.color_to)})`,
+                            }}
+                          >
                             <BookOpen className="h-8 w-8 text-white/60" />
                           </div>
                         )}

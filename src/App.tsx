@@ -1,3 +1,4 @@
+import { Suspense, lazy, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,31 +15,33 @@ import { ThemeProvider } from "./context/ThemeContext";
 import GuideSpotlight from "./components/GuideSpotlight";
 import { GuideHighlightProvider } from "./context/GuideHighlightContext";
 import PolicySigningGate from "./components/PolicySigningGate";
-import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCanceled from "./pages/PaymentCanceled";
-import Home from "./pages/Home";
-import Discover from "./pages/Discover";
-
-import Delivery from "./pages/Delivery";
-import Explore from "./pages/Explore";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import Shopping from "./pages/Shopping";
-import PendingApproval from "./pages/PendingApproval";
-import NotFound from "./pages/NotFound";
-import Measurements from "./pages/Measurements";
-import AdminClientView from "./pages/AdminClientView";
-import Profile from "./pages/Profile";
-import VideoLibrary from "./pages/VideoLibrary";
-import Resources from "./pages/Resources";
-import ResetPassword from "./pages/ResetPassword";
-import Community from "./pages/Community";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const Landing = lazy(() => import("./pages/Landing"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentCanceled = lazy(() => import("./pages/PaymentCanceled"));
+const Home = lazy(() => import("./pages/Home"));
+const Discover = lazy(() => import("./pages/Discover"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
+const PendingApproval = lazy(() => import("./pages/PendingApproval"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Measurements = lazy(() => import("./pages/Measurements"));
+const AdminClientView = lazy(() => import("./pages/AdminClientView"));
+const Profile = lazy(() => import("./pages/Profile"));
+const VideoLibrary = lazy(() => import("./pages/VideoLibrary"));
+const Resources = lazy(() => import("./pages/Resources"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Community = lazy(() => import("./pages/Community"));
+
+const RouteLoader = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="h-8 w-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading, approved } = useAuth();
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
   if (!user) return <Navigate to="/" replace />;
@@ -46,7 +49,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <PolicySigningGate>{children}</PolicySigningGate>;
 };
 
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading, isAdmin } = useAuth();
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
   if (!user) return <Navigate to="/" replace />;
@@ -54,7 +57,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+const AuthRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user) return <Navigate to="/home" replace />;
@@ -75,25 +78,27 @@ const App = () => (
             <BrowserRouter>
             <GuideHighlightProvider>
             <GuideSpotlight />
-              <Routes>
-                <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
-                <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                <Route path="/payment-canceled" element={<PaymentCanceled />} />
-                <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-                <Route element={<ProtectedRoute><PageActionsProvider><AppLayout /></PageActionsProvider></ProtectedRoute>}>
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/discover" element={<Discover />} />
-                  <Route path="/measurements" element={<Measurements />} />
-                  <Route path="/learn" element={<VideoLibrary />} />
-                  <Route path="/resources" element={<Resources />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/community" element={<Community />} />
-                </Route>
-                <Route path="/admin/client/:userId" element={<AdminRoute><AdminClientView /></AdminRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<RouteLoader />}>
+                <Routes>
+                  <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
+                  <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-canceled" element={<PaymentCanceled />} />
+                  <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route element={<ProtectedRoute><PageActionsProvider><AppLayout /></PageActionsProvider></ProtectedRoute>}>
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/discover" element={<Discover />} />
+                    <Route path="/measurements" element={<Measurements />} />
+                    <Route path="/learn" element={<VideoLibrary />} />
+                    <Route path="/resources" element={<Resources />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/community" element={<Community />} />
+                  </Route>
+                  <Route path="/admin/client/:userId" element={<AdminRoute><AdminClientView /></AdminRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </GuideHighlightProvider>
             </BrowserRouter>
           </SavedActivitiesProvider>

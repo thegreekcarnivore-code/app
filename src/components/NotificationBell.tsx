@@ -175,6 +175,7 @@ const NotificationBell = () => {
       case "client_measurement": return "⚖️";
       case "client_photo": return "📸";
       case "client_late": return "⚠️";
+      case "weekly_check_in": return "🧠";
       default: return "🔔";
     }
   };
@@ -183,6 +184,7 @@ const NotificationBell = () => {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
+          data-guide="notifications-bell"
           className="relative inline-flex items-center justify-center rounded-lg p-1.5 transition-all hover:bg-muted/50 text-foreground"
           aria-label="Notifications"
         >

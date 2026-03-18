@@ -19,7 +19,7 @@ const MeasurementReminderBanner = () => {
   }, [user]);
 
   const checkMeasurements = async () => {
-    if (!user) return;
+    if (!user || isAdmin) return;
 
     // Get active enrollment with weekly_day
     const { data: enrollments } = await supabase
@@ -95,7 +95,7 @@ const MeasurementReminderBanner = () => {
         initial={{ opacity: 0, y: -8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.98 }}
-        className="relative mb-4 overflow-hidden rounded-xl border border-gold/40 bg-gradient-to-r from-gold/15 via-gold/10 to-gold/5 p-4"
+        className="relative mb-4 overflow-hidden rounded-[1.5rem] border border-gold/25 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 shadow-sm"
       >
         <button
           onClick={() => setDismissed(true)}
@@ -110,21 +110,26 @@ const MeasurementReminderBanner = () => {
             <Camera className="h-4 w-4 text-gold/70" />
           </div>
           <div className="flex-1 space-y-2">
-            <p className="font-sans text-sm font-semibold text-foreground leading-snug">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
               {lang === "el"
-                ? "Ώρα για τις μετρήσεις σου! 📏"
-                : "Time for your measurements! 📏"}
+                ? "Εβδομαδιαία υπενθύμιση"
+                : "Weekly reminder"}
+            </p>
+            <p className="font-serif text-base font-semibold text-foreground leading-snug">
+              {lang === "el"
+                ? "Κράτα το check-in σου στην ώρα του"
+                : "Keep your check-in on rhythm"}
             </p>
             <p className="font-sans text-xs text-muted-foreground leading-relaxed">
               {lang === "el"
-                ? "Μην αφήνεις αυτό να περάσει — οι εβδομαδιαίες μετρήσεις και φωτογραφίες σου είναι αυτό που θα σε κρατήσει στο σωστό δρόμο! Κατέγραψέ τες τώρα! 💪"
-                : "Don't let this slide — your weekly measurements and photos are what keep you on track! Log them now! 💪"}
+                ? "Οι μετρήσεις και οι φωτογραφίες της εβδομάδας δίνουν στον coach καθαρή εικόνα για το τι αλλάζει και πού χρειάζεται προσαρμογή."
+                : "Your weekly measurements and photos give your coach a clearer read on what is changing and what needs adjustment."}
             </p>
             <button
               onClick={handleGoToMeasurements}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 font-sans text-xs font-semibold text-gold-foreground transition-all hover:opacity-90 hover:shadow-md shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gold px-3 py-2 font-sans text-xs font-semibold text-gold-foreground transition-all hover:opacity-90 hover:shadow-md shadow-sm"
             >
-              {lang === "el" ? "Πάμε στις μετρήσεις" : "Go to Measurements"}
+              {lang === "el" ? "Άνοιγμα μετρήσεων" : "Open measurements"}
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>

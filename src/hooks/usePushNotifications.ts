@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const VAPID_PUBLIC_KEY = "BJ9RN-MonAoC0p3JdyH_V-XIbbd4fWUmV0UplSUMgZe1FKHB-E41Ii-x04sao77qoeHHLof033KAJPCeqIi-usc";
+const VAPID_PUBLIC_KEY =
+  import.meta.env.VITE_VAPID_PUBLIC_KEY ||
+  "BJ9RN-MonAoC0p3JdyH_V-XIbbd4fWUmV0UplSUMgZe1FKHB-E41Ii-x04sao77qoeHHLof033KAJPCeqIi-usc";
 
 // Stale endpoint patterns that should trigger a forced re-subscribe
 const STALE_ENDPOINT_PATTERNS = [

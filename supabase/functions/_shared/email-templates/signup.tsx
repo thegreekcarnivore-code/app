@@ -14,6 +14,7 @@ import {
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { getEmailLogoUrl } from '../app-config.ts'
 
 interface SignupEmailProps {
   siteName: string
@@ -57,6 +58,7 @@ export const SignupEmail = ({
 }: SignupEmailProps) => {
   const t = COPY[language as keyof typeof COPY] || COPY.en
   const lang = language === 'el' ? 'el' : 'en'
+  const logoUrl = getEmailLogoUrl()
 
   return (
     <Html lang={lang} dir="ltr">
@@ -65,7 +67,7 @@ export const SignupEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Img
-            src="https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1"
+            src={logoUrl}
             alt="The Greek Carnivore"
             width="80"
             style={logo}

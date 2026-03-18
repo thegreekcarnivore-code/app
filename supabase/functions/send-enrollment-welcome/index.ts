@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { getAppBaseUrl } from "../_shared/app-config.ts";
+import { getAppBaseUrl, getEmailLogoUrl } from "../_shared/app-config.ts";
 import { createOpenAIChatCompletion, getOpenAIModel } from "../_shared/openai.ts";
 
 const corsHeaders = {
@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const FROM_EMAIL = "The Greek Carnivore <noreply@thegreekcarnivore.com>";
-const LOGO_URL = "https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1";
+const LOGO_URL = getEmailLogoUrl();
 const APP_URL = getAppBaseUrl();
 
 function formatDate(dateStr: string, lang: string): string {

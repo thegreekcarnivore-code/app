@@ -1,5 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildAppUrl } from "../_shared/app-config.ts";
+import { buildAppUrl, getEmailLogoUrl } from "../_shared/app-config.ts";
+import {
+  generateWeeklyCheckIn,
+  WEEKLY_CHECK_IN_HOUR,
+  WEEKLY_CHECK_IN_MINUTE,
+} from "../_shared/weekly-checkins.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +12,39 @@ const corsHeaders = {
 };
 
 const FROM_EMAIL = "The Greek Carnivore <noreply@thegreekcarnivore.com>";
-const LOGO_URL = "https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1";
+const LOGO_URL = getEmailLogoUrl();
+
+function getLocalDateContext(date: Date, timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return {
+    date: `${map.year}-${map.month}-${map.day}`,
+    dow: weekdayMap[map.weekday] ?? date.getDay(),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+  };
+}
 
 function buildMeasurementReminderEmail(firstName: string, lang: string): string {
   const isEl = lang === "el";
@@ -63,6 +100,36 @@ function buildGenericMessageEmail(firstName: string, messageContent: string, lan
 </html>`;
 }
 
+function buildWeeklyCheckInEmail(firstName: string, summary: string, checkInId: string, lang: string): string {
+  const isEl = lang === "el";
+  const heading = isEl ? "Το εβδομαδιαίο check-in σου είναι έτοιμο" : "Your weekly check-in is ready";
+  const greeting = isEl ? `Καλησπέρα <strong>${firstName}</strong>,` : `Hi <strong>${firstName}</strong>,`;
+  const body = isEl
+    ? "Η 7ήμερη ανάλυσή σου είναι έτοιμη μέσα στην εφαρμογή. Άνοιξέ την για να δεις την ουσία της εβδομάδας και το πού πρέπει να εστιάσεις τώρα."
+    : "Your 7-day analysis is ready inside the app. Open it to see the real story of your week and where to focus next.";
+  const ctaText = isEl ? "Άνοιξε το εβδομαδιαίο check-in" : "Open weekly check-in";
+  const summaryLabel = isEl ? "Σύντομη εικόνα" : "Quick summary";
+
+  return `<!DOCTYPE html>
+<html lang="${isEl ? "el" : "en"}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:480px;margin:0 auto;padding:40px 30px;">
+    <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 20px;letter-spacing:0.02em;">${heading}</h1>
+    <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 16px;">${greeting}</p>
+    <p style="font-size:14px;color:#666;line-height:1.7;margin:0 0 20px;">${body}</p>
+    <div style="background:#faf8f4;border-radius:10px;padding:16px 20px;margin:0 0 24px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.05em;">${summaryLabel}</p>
+      <p style="margin:0;font-size:14px;color:#444;line-height:1.7;">${summary}</p>
+    </div>
+    <a href="${buildAppUrl(`/measurements?checkIn=${checkInId}`)}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;">${ctaText}</a>
+    <p style="font-size:12px;color:#999;margin:32px 0 0;line-height:1.5;">The Greek Carnivore</p>
+  </div>
+</body>
+</html>`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -72,11 +139,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    const todayDow = today.getDay(); // 0=Sun, 1=Mon...
-    const utcHour = today.getUTCHours();
-    const utcMinute = today.getUTCMinutes();
+    const now = new Date();
 
     // Get all active enrollments
     const { data: enrollments, error: enrollErr } = await supabase
@@ -101,11 +164,12 @@ Deno.serve(async (req) => {
     let messagesSent = 0;
     let tasksCreated = 0;
     let emailsSent = 0;
+    let weeklyCheckInsGenerated = 0;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     for (const enrollment of enrollments) {
       const startDate = new Date(enrollment.start_date);
-      const dayOffset = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const dayOffset = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Get template duration, use override if set
       const { data: tmpl } = await supabase
@@ -125,22 +189,12 @@ Deno.serve(async (req) => {
         .single();
       const clientName = profile?.display_name || profile?.email?.split("@")[0] || "there";
 
-      // Get client's local time (hour and minute)
       const clientTz = profile?.timezone || "Europe/Athens";
-      let clientLocalHour: number;
-      let clientLocalMinute: number;
-      try {
-        const hFmt = new Intl.DateTimeFormat("en-US", { timeZone: clientTz, hour: "numeric", hour12: false });
-        clientLocalHour = parseInt(hFmt.format(today), 10);
-        const mFmt = new Intl.DateTimeFormat("en-US", { timeZone: clientTz, minute: "numeric" });
-        clientLocalMinute = parseInt(mFmt.format(today), 10);
-      } catch {
-        const hFmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Athens", hour: "numeric", hour12: false });
-        clientLocalHour = parseInt(hFmt.format(today), 10);
-        const mFmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Athens", minute: "numeric" });
-        clientLocalMinute = parseInt(mFmt.format(today), 10);
-      }
+      const localContext = getLocalDateContext(now, clientTz);
       const clientLang = profile?.language || "el";
+      const todayStr = localContext.date;
+      const todayDow = localContext.dow;
+      const clientTimeInMinutes = localContext.hour * 60 + localContext.minute;
 
       // --- MESSAGES ---
       const { data: messages } = await supabase
@@ -155,7 +209,6 @@ Deno.serve(async (req) => {
           const msgMinute = msg.send_minute ?? 30;
           // Allow a 30-minute window for cron timing tolerance
           const msgTimeInMinutes = msgHour * 60 + msgMinute;
-          const clientTimeInMinutes = clientLocalHour * 60 + clientLocalMinute;
           if (clientTimeInMinutes < msgTimeInMinutes || clientTimeInMinutes >= msgTimeInMinutes + 30) {
             continue;
           }
@@ -235,6 +288,103 @@ Deno.serve(async (req) => {
         }
       }
 
+      const weeklyCheckInTimeInMinutes = WEEKLY_CHECK_IN_HOUR * 60 + WEEKLY_CHECK_IN_MINUTE;
+      const isWeeklyCheckInWindow =
+        todayDow === enrollment.weekly_day &&
+        clientTimeInMinutes >= weeklyCheckInTimeInMinutes &&
+        clientTimeInMinutes < weeklyCheckInTimeInMinutes + 30;
+
+      if (isWeeklyCheckInWindow) {
+        const { data: existingCheckIn } = await supabase
+          .from("weekly_check_ins")
+          .select("id")
+          .eq("user_id", enrollment.user_id)
+          .eq("week_end", todayStr)
+          .maybeSingle();
+
+        if (!existingCheckIn) {
+          try {
+            const weeklyCheckIn = await generateWeeklyCheckIn({
+              adminClient: supabase,
+              userId: enrollment.user_id,
+              lang: clientLang,
+              weekEnd: todayStr,
+            });
+
+            const checkInStatus =
+              Number(weeklyCheckIn.dataSnapshot.weeklyMeasurementCount || 0) === 0
+                ? "reminder"
+                : "generated";
+
+            const { data: insertedCheckIn, error: insertCheckInError } = await supabase
+              .from("weekly_check_ins")
+              .insert({
+                user_id: enrollment.user_id,
+                enrollment_id: enrollment.id,
+                week_start: weeklyCheckIn.weekStart,
+                week_end: weeklyCheckIn.weekEnd,
+                due_at: now.toISOString(),
+                generated_at: now.toISOString(),
+                language: weeklyCheckIn.language,
+                status: checkInStatus,
+                summary: weeklyCheckIn.summary,
+                report_content: weeklyCheckIn.report,
+                coach_message: weeklyCheckIn.coachMessage,
+                data_snapshot: weeklyCheckIn.dataSnapshot,
+              })
+              .select("id")
+              .single();
+
+            if (insertCheckInError) throw insertCheckInError;
+
+            const notificationTitle = clientLang === "el"
+              ? "Το 7ήμερο check-in σου είναι έτοιμο"
+              : "Your 7-day check-in is ready";
+
+            await supabase.from("client_notifications").insert({
+              user_id: enrollment.user_id,
+              type: "weekly_check_in",
+              title: notificationTitle,
+              body: weeklyCheckIn.summary || weeklyCheckIn.coachMessage,
+              link: `/measurements?checkIn=${insertedCheckIn.id}`,
+            });
+
+            if (resendApiKey && profile?.email) {
+              const emailHtml = buildWeeklyCheckInEmail(
+                clientName,
+                weeklyCheckIn.summary || weeklyCheckIn.coachMessage,
+                insertedCheckIn.id,
+                clientLang,
+              );
+              const emailSubject = clientLang === "el"
+                ? "Το εβδομαδιαίο check-in σου είναι έτοιμο"
+                : "Your weekly check-in is ready";
+
+              const emailRes = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${resendApiKey}`,
+                },
+                body: JSON.stringify({
+                  from: FROM_EMAIL,
+                  to: [profile.email],
+                  subject: emailSubject,
+                  html: emailHtml,
+                }),
+              });
+
+              if (emailRes.ok) emailsSent++;
+              else console.error(`Weekly check-in email to ${profile.email} failed:`, await emailRes.text());
+            }
+
+            weeklyCheckInsGenerated++;
+          } catch (error) {
+            console.error(`Weekly check-in generation failed for ${enrollment.user_id}:`, error);
+          }
+        }
+      }
+
       // --- TASKS ---
       const { data: taskTemplates } = await supabase
         .from("program_tasks")
@@ -305,7 +455,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: `Processed ${enrollments.length} enrollments. Messages sent: ${messagesSent}, Tasks created: ${tasksCreated}, Emails sent: ${emailsSent}` }),
+      JSON.stringify({ message: `Processed ${enrollments.length} enrollments. Messages sent: ${messagesSent}, Tasks created: ${tasksCreated}, Weekly check-ins: ${weeklyCheckInsGenerated}, Emails sent: ${emailsSent}` }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

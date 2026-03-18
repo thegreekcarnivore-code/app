@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getEmailLogoUrl } from "../_shared/app-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,7 @@ function buildEmailHtml(
   scheduledAt?: string,
   durationMinutes?: number,
 ) {
-  const logoUrl = "https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1";
+  const logoUrl = getEmailLogoUrl();
   const isEl = lang === "el";
 
   let dateBlock = "";

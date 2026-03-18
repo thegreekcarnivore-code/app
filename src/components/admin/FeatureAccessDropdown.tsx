@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   Popover,
@@ -90,17 +90,24 @@ const FeatureAccessDropdown = ({ featureKey, label }: FeatureAccessDropdownProps
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[10px] font-sans font-medium text-muted-foreground hover:text-foreground hover:border-gold/30 transition-all"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/75 px-3 py-1.5 text-[11px] font-sans font-medium text-muted-foreground shadow-sm transition-all hover:border-gold/30 hover:bg-background hover:text-foreground"
           title={`Manage ${label || featureKey} access`}
         >
-          <Shield className="h-3 w-3" />
-          Access
+          <Shield className="h-3.5 w-3.5 text-gold" />
+          Client access
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="end">
-        <div className="px-3 py-2.5 border-b border-border">
-          <p className="text-xs font-sans font-semibold text-foreground">
+      <PopoverContent className="w-80 overflow-hidden rounded-3xl border border-border/70 p-0 shadow-xl" align="end">
+        <div className="border-b border-border bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] px-4 py-3.5">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.2em] text-gold">
+            <Sparkles className="h-3 w-3" />
+            Access control
+          </div>
+          <p className="mt-2 text-sm font-serif font-semibold text-foreground">
             {label || featureKey} — Client Access
+          </p>
+          <p className="mt-1 text-xs font-sans leading-relaxed text-muted-foreground">
+            Approve or restrict this area for active clients without leaving the page.
           </p>
         </div>
 
@@ -111,27 +118,36 @@ const FeatureAccessDropdown = ({ featureKey, label }: FeatureAccessDropdownProps
         ) : clients.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">No clients found</p>
         ) : (
-          <div className="max-h-64 overflow-y-auto divide-y divide-border">
+          <div className="max-h-72 overflow-y-auto divide-y divide-border bg-background/95">
             {clients.map((client) => {
               const hasAccess = client.feature_access[featureKey] !== false;
               return (
                 <div
                   key={client.id}
-                  className="flex items-center justify-between px-3 py-2"
+                  className="flex items-center justify-between gap-3 px-4 py-3"
                 >
-                  <div className="min-w-0 flex-1 mr-2">
-                    <p className="text-xs font-sans font-medium text-foreground truncate">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-sans font-medium text-foreground truncate">
                       {client.display_name || client.email || "Unknown"}
                     </p>
                     {client.display_name && client.email && (
-                      <p className="text-[10px] text-muted-foreground truncate">{client.email}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{client.email}</p>
                     )}
                   </div>
-                  <Switch
-                    checked={hasAccess}
-                    disabled={toggling === client.id}
-                    onCheckedChange={() => toggleAccess(client)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-[0.16em] ${
+                      hasAccess
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {hasAccess ? "On" : "Off"}
+                    </span>
+                    <Switch
+                      checked={hasAccess}
+                      disabled={toggling === client.id}
+                      onCheckedChange={() => toggleAccess(client)}
+                    />
+                  </div>
                 </div>
               );
             })}

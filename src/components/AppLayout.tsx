@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import BottomNav from "./BottomNav";
 import ChatBubble from "./ChatBubble";
 import AssistantBubble from "./AssistantBubble";
@@ -6,19 +6,16 @@ import ChatTrigger from "./ChatTrigger";
 import { useLanguage } from "@/context/LanguageContext";
 import { useGuideHighlight } from "@/context/GuideHighlightContext";
 import { useAuth } from "@/hooks/useAuth";
-import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useChatContext } from "@/context/ChatContext";
-import { usePageActions } from "@/context/PageActionsContext";
 import TaskNotificationBanner from "./TaskNotificationBanner";
 import MeasurementReminderBanner from "./MeasurementReminderBanner";
 import FormSigningFlow from "./onboarding/FormSigningFlow";
 import OnboardingTour from "./onboarding/OnboardingTour";
-import FeatureAccessDropdown from "@/components/admin/FeatureAccessDropdown";
 import NotificationBell from "@/components/NotificationBell";
-import { Bookmark, Clock, MapPin } from "lucide-react";
+import { Globe2, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -26,14 +23,15 @@ const AppLayout = () => {
   const { lang, toggleLanguage } = useLanguage();
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tourCompleted, setTourCompleted] = useState(true);
   const [manualTour, setManualTour] = useState(false);
   const { chatOpen, setChatOpen, assistantOpen, setAssistantOpen, pendingGuide, setPendingGuide, requestTour, setRequestTour } = useChatContext();
-  const { actions } = usePageActions();
   const { showHighlight, state: guideState } = useGuideHighlight();
   const userInitial = user?.email?.charAt(0).toUpperCase() ?? "?";
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, subscribe: pushSubscribe } = usePushNotifications();
+  const showHomeBanners = location.pathname === "/home";
 
   // Auto-subscribe non-admin clients to push notifications on first load
   useEffect(() => {
@@ -158,69 +156,41 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Right pill – actions, profile & language */}
-      <div className="fixed top-4 right-4 z-50">
-        <div className="flex items-center gap-1.5 rounded-xl border border-border/50 glass-card p-1 text-xs font-sans font-medium shadow-lg shadow-black/5">
-          {/* Page-level action buttons */}
-          {actions.hasHistory && actions.onOpenHistory && (
+      <div className="fixed inset-x-0 top-0 z-50 pointer-events-none">
+        <div className="mx-auto flex max-w-6xl justify-end px-3 pt-3 sm:px-4">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-[1.5rem] border border-border/50 bg-background/85 p-1 shadow-lg shadow-black/5 backdrop-blur">
+            <ChatTrigger variant="compact" />
+            <NotificationBell />
             <button
-              onClick={actions.onOpenHistory}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 transition-all hover:bg-muted/50 text-foreground"
-              aria-label="History"
+              data-guide="language-toggle"
+              onClick={toggleLanguage}
+              className="inline-flex h-9 items-center gap-1 rounded-xl px-2.5 text-foreground transition-all hover:bg-muted/60"
+              aria-label={lang === "en" ? "Switch to Greek" : "Switch to English"}
             >
-              <Clock className="h-4 w-4" />
+              <Globe2 className="h-4 w-4" />
               <span className="text-[10px] font-sans font-medium text-muted-foreground">
-                {lang === "el" ? "Ιστορικό" : "History"}
+                {lang === "en" ? "Ελ" : "EN"}
               </span>
             </button>
-          )}
-          {actions.hasSaved && actions.onOpenSaved && (
             <button
-              onClick={actions.onOpenSaved}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 transition-all hover:bg-muted/50 text-foreground"
-              aria-label="Saved"
+              data-guide="profile-button"
+              onClick={() => navigate("/profile")}
+              className="rounded-full transition-all hover:opacity-80 hover:ring-2 hover:ring-gold/30"
             >
-              <Bookmark className="h-4 w-4" />
-              <span className="text-[10px] font-sans font-medium text-muted-foreground">
-                {lang === "el" ? "Αποθηκ." : "Saved"}
-              </span>
+              <Avatar className="h-9 w-9 ring-2 ring-gold/35 ring-offset-2 ring-offset-background">
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profile" /> : null}
+                <AvatarFallback className="text-xs font-serif bg-gradient-to-br from-gold to-primary text-primary-foreground">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
             </button>
-          )}
-          {isAdmin && actions.featureKey && actions.featureLabel && (
-            <FeatureAccessDropdown featureKey={actions.featureKey} label={actions.featureLabel} />
-          )}
-          <ChatTrigger />
-          <NotificationBell />
-          <button data-guide="profile-button" onClick={() => navigate("/profile")} className="rounded-full transition-all hover:opacity-80 hover:ring-2 hover:ring-gold/30">
-            <Avatar className="h-7 w-7">
-              {avatarUrl ? <AvatarImage src={avatarUrl} alt="Profile" /> : null}
-              <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">{userInitial}</AvatarFallback>
-            </Avatar>
-          </button>
-          <button
-            onClick={() => lang !== "en" && toggleLanguage()}
-            className={cn(
-              "rounded-md px-2 py-1 transition-all duration-200",
-              lang === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            EN
-          </button>
-          <button
-            onClick={() => lang !== "el" && toggleLanguage()}
-            className={cn(
-              "rounded-md px-2 py-1 transition-all duration-200",
-              lang === "el" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Ελ
-          </button>
+          </div>
         </div>
       </div>
 
-      <main className="mx-auto max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-6xl px-3 sm:px-4 pt-14 pb-24">
-        <TaskNotificationBanner />
-        <MeasurementReminderBanner />
+      <main className="mx-auto max-w-lg px-3 pt-20 pb-24 sm:px-4 md:max-w-2xl md:pt-24 lg:max-w-4xl xl:max-w-6xl">
+        {showHomeBanners && <TaskNotificationBanner />}
+        {showHomeBanners && <MeasurementReminderBanner />}
         <Outlet />
       </main>
       <BottomNav />
@@ -234,13 +204,13 @@ const AppLayout = () => {
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             transition={{ duration: 0.2 }}
             onClick={() => { setPendingGuide(null); showHighlight(pendingGuide); }}
-            className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-gold px-4 py-2.5 shadow-lg shadow-gold/20 text-gold-foreground transition-all hover:shadow-xl hover:shadow-gold/30 hover:scale-105"
+            className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full bg-gold px-3 py-2 text-gold-foreground shadow-lg shadow-gold/20 transition-all hover:bg-gold/90"
           >
             <MapPin className="h-4 w-4" />
             <span className="font-sans text-xs font-semibold">
-              {lang === "el" ? "Δείξε μου" : "Show Me"}
+              {lang === "el" ? "Οδηγός" : "Guide"}
               {pendingGuide.length > 1 && (
-                <span className="ml-1 opacity-70 font-normal">({pendingGuide.length} {lang === "el" ? "βήματα" : "steps"})</span>
+                <span className="ml-1 opacity-70 font-normal">{pendingGuide.length}</span>
               )}
             </span>
           </motion.button>

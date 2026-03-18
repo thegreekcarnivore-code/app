@@ -12,7 +12,7 @@ import AdminGroupManager from "@/components/admin/AdminGroupManager";
 import InviteClientPanel from "@/components/admin/InviteClientPanel";
 import InviteLinkGenerator from "@/components/admin/InviteLinkGenerator";
 import IconButtonWithTooltip from "@/components/IconButtonWithTooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import ClientNotesPanel from "@/components/ClientNotesPanel";
 import AdminReportPanel from "@/components/AdminReportPanel";
@@ -88,9 +88,20 @@ interface UserEnrollmentInfo {
   duration_weeks: number;
 }
 
+const ADMIN_TABS = [
+  { key: "users", label: "Clients", icon: Users, description: "Client records, approvals, invitations, and direct actions." },
+  { key: "invites", label: "Invites", icon: Link2, description: "Invitation links and email-based onboarding access." },
+  { key: "programs", label: "Programs", icon: BookOpen, description: "Program templates, structure, and assigned content." },
+  { key: "calls", label: "Calls", icon: Video, description: "Upcoming calls, schedules, and participation management." },
+  { key: "categories", label: "Categories", icon: Tag, description: "Client grouping, tagging, and access segmentation." },
+  { key: "todo", label: "To-Do", icon: ListTodo, description: "Operational tasks, follow-ups, and accountability actions." },
+  { key: "groups", label: "Groups", icon: Users, description: "Community groups and shared client cohorts." },
+  { key: "finance", label: "Finance", icon: DollarSign, description: "Revenue visibility, offer tracking, and business metrics." },
+] as const;
+
 const Admin = () => {
   const { user, signOut } = useAuth();
-  const { lang, toggleLanguage, t } = useLanguage();
+  const { lang, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
   const [accountabilityOpen, setAccountabilityOpen] = useState(false);
@@ -455,6 +466,62 @@ const Admin = () => {
     }
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+  const pendingApprovals = users.filter((u) => !u.approved).length;
+  const activeEnrollments = enrollmentMap.size;
+  const clientsWithPendingTasks = Array.from(pendingTaskMap.values()).filter((count) => count > 0).length;
+  const awaitingPaymentCount = new Set(
+    [
+      ...users
+        .filter((u) => awaitingPaymentSet.has(u.id) || (u.email ? awaitingPaymentSet.has(u.email.toLowerCase()) : false))
+        .map((u) => u.id),
+      ...orphanInvitations
+        .filter((u) => (u.email ? awaitingPaymentSet.has(u.email.toLowerCase()) : false))
+        .map((u) => u.id),
+    ],
+  ).size;
+  const summaryCards = [
+    { key: "clients", label: "Active client records", value: users.length, icon: Users },
+    { key: "approvals", label: "Awaiting approval", value: pendingApprovals, icon: Shield },
+    { key: "enrollments", label: "Active enrollments", value: activeEnrollments, icon: ClipboardCheck },
+    { key: "invites", label: "Pending invitations", value: orphanInvitations.length, icon: Mail },
+  ];
+  const urgentActionCards = [
+    {
+      key: "approvals",
+      label: "Client approvals",
+      value: pendingApprovals,
+      detail: "Profiles waiting before onboarding can start.",
+      action: () => {
+        setActiveTab("users");
+        setUserCategory("pending");
+      },
+    },
+    {
+      key: "invites",
+      label: "Outstanding invites",
+      value: orphanInvitations.length,
+      detail: "Invite emails sent but not yet attached to real profiles.",
+      action: () => setActiveTab("invites"),
+    },
+    {
+      key: "todo",
+      label: "Clients with tasks due",
+      value: clientsWithPendingTasks,
+      detail: "Clients carrying unfinished follow-up items.",
+      action: () => setActiveTab("todo"),
+    },
+    {
+      key: "payments",
+      label: "Awaiting payment",
+      value: awaitingPaymentCount,
+      detail: "Prospects or clients currently sitting in offer-sent status.",
+      action: () => {
+        setActiveTab("users");
+        setUserCategory("all");
+      },
+    },
+  ];
+  const activeTabMeta = ADMIN_TABS.find((tab) => tab.key === activeTab) ?? ADMIN_TABS[0];
 
   if (loading) {
     return (
@@ -479,12 +546,18 @@ const Admin = () => {
   return (
     <div className="px-6 pt-14 pb-24">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
             <img src={logo} alt="The Greek Carnivore" className="h-12 w-auto object-contain" />
-            <h1 className="font-serif text-xl font-semibold text-foreground">Admin Panel</h1>
+            <div className="space-y-1">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold">Coaching Operations</p>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">Admin Panel</h1>
+              <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
+                Keep client operations, enrollment flow, follow-ups, and business visibility in one controlled workspace.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <IconButtonWithTooltip
               tooltip="Messages"
               onClick={(e) => { e.stopPropagation(); setChatOpen(!chatOpen); }}
@@ -523,96 +596,155 @@ const Admin = () => {
           </div>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
-          <button onClick={() => setActiveTab("users")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "users" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Users className="h-3.5 w-3.5" />
-            Users ({users.length + orphanInvitations.length})
-          </button>
-          <button onClick={() => setActiveTab("invites")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "invites" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Link2 className="h-3.5 w-3.5" />
-            Invites
-          </button>
-          <button onClick={() => setActiveTab("programs")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "programs" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <BookOpen className="h-3.5 w-3.5" />
-            Programs
-          </button>
-          <button onClick={() => setActiveTab("calls")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "calls" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Video className="h-3.5 w-3.5" />
-            Calls
-          </button>
-          <button onClick={() => setActiveTab("categories")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "categories" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Tag className="h-3.5 w-3.5" />
-            Categories
-          </button>
-          <button onClick={() => setActiveTab("todo")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "todo" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <ListTodo className="h-3.5 w-3.5" />
-            To-Do
-          </button>
-          <button onClick={() => setActiveTab("groups")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "groups" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Users className="h-3.5 w-3.5" />
-            Groups
-          </button>
-          <button onClick={() => setActiveTab("finance")} className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === "finance" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <DollarSign className="h-3.5 w-3.5" />
-            Finance
-          </button>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map(({ key, label, value, icon: Icon }) => (
+            <div key={key} className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-sans text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+                  <p className="mt-2 font-serif text-2xl font-semibold text-foreground">{value}</p>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/10 text-gold">
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-gold">Needs attention now</p>
+              <h2 className="font-serif text-lg font-semibold text-foreground">Priority scan</h2>
+              <p className="font-sans text-sm text-muted-foreground">
+                Jump straight to the parts of the operation that are most likely to block momentum.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {urgentActionCards.map((card) => (
+                <button
+                  key={card.key}
+                  onClick={card.action}
+                  className="rounded-[1.5rem] border border-border/70 bg-background/80 p-4 text-left transition-all hover:border-gold/35 hover:shadow-sm"
+                >
+                  <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">{card.label}</p>
+                  <p className="mt-2 font-serif text-2xl font-semibold text-foreground">{card.value}</p>
+                  <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">{card.detail}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-gold">Workspace</p>
+              <h2 className="font-serif text-lg font-semibold text-foreground">{activeTabMeta.label}</h2>
+              <p className="font-sans text-sm text-muted-foreground">{activeTabMeta.description}</p>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {ADMIN_TABS.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`inline-flex min-w-fit items-center gap-2 rounded-full px-3 py-2 font-sans text-xs font-medium transition-all ${activeTab === key ? "bg-gold text-gold-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {key === "users" ? `${label} (${users.length + orphanInvitations.length})` : label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {activeTab === "users" && (
-          <div className="space-y-3">
-            {/* Add Client button + Category filter */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex gap-1.5 flex-wrap flex-1">
-              {(["all", "approved", "pending", "enrolled", "invited"] as const).map(cat => {
-                const counts = { all: users.length + orphanInvitations.length, approved: users.filter(u => u.approved).length, pending: users.filter(u => !u.approved).length, enrolled: users.filter(u => enrollmentMap.has(u.id)).length, invited: orphanInvitations.length };
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setUserCategory(cat)}
-                    className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userCategory === cat ? "bg-gold text-gold-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)} ({counts[cat]})
-                  </button>
-                );
-              })}
-              {adminCategories.map(cat => {
-                const count = adminCatAssignments.filter(a => a.category_id === cat.id).length;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setUserCategory(cat.id)}
-                    className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all flex items-center gap-1 ${userCategory === cat.id ? "bg-gold text-gold-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
-                  >
-                    <Tag className="h-2.5 w-2.5" />
-                    {cat.name} ({count})
-                  </button>
-                );
-              })}
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="font-serif text-lg font-semibold text-foreground">Client workspace</h3>
+                    <p className="font-sans text-sm text-muted-foreground">
+                      Review approvals, enrollment progress, pending work, and direct client actions from one queue.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {pendingApprovals > 0 && (
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-sans font-medium text-amber-600">
+                        {pendingApprovals} approvals waiting
+                      </span>
+                    )}
+                    {clientsWithPendingTasks > 0 && (
+                      <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-sans font-medium text-gold">
+                        {clientsWithPendingTasks} clients with pending tasks
+                      </span>
+                    )}
+                    {orphanInvitations.length > 0 && (
+                      <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-sans font-medium text-primary">
+                        {orphanInvitations.length} invite-only records
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["all", "approved", "pending", "enrolled", "invited"] as const).map(cat => {
+                      const counts = { all: users.length + orphanInvitations.length, approved: users.filter(u => u.approved).length, pending: users.filter(u => !u.approved).length, enrolled: users.filter(u => enrollmentMap.has(u.id)).length, invited: orphanInvitations.length };
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setUserCategory(cat)}
+                          className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userCategory === cat ? "bg-gold text-gold-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)} ({counts[cat]})
+                        </button>
+                      );
+                    })}
+                    {adminCategories.map(cat => {
+                      const count = adminCatAssignments.filter(a => a.category_id === cat.id).length;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setUserCategory(cat.id)}
+                          className={`flex items-center gap-1 rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userCategory === cat.id ? "bg-gold text-gold-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <Tag className="h-2.5 w-2.5" />
+                          {cat.name} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setUserSort("newest")}
+                      className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userSort === "newest" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Newest First
+                    </button>
+                    <button
+                      onClick={() => setUserSort("last-login")}
+                      className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userSort === "last-login" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Last Login
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setAddClientOpen(true)}
+                  className="flex items-center justify-center gap-1.5 rounded-full bg-gold px-3 py-2 font-sans text-[11px] font-semibold text-gold-foreground hover:opacity-90 transition-opacity shrink-0"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Add Client
+                </button>
               </div>
-              <button
-                onClick={() => setAddClientOpen(true)}
-                className="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1 font-sans text-[11px] font-semibold text-gold-foreground hover:opacity-90 transition-opacity shrink-0"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                Add Client
-              </button>
             </div>
-            {/* Sort toggle */}
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setUserSort("newest")}
-                className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userSort === "newest" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
-              >
-                Newest First
-              </button>
-              <button
-                onClick={() => setUserSort("last-login")}
-                className={`rounded-full px-3 py-1 font-sans text-[11px] font-medium transition-all ${userSort === "last-login" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
-              >
-                Last Login
-              </button>
-            </div>
+
             {filteredUsers.map((u) => {
               const isVirtual = u._isVirtualInvite;
               const activity = !isVirtual ? activityMap.get(u.id) : undefined;

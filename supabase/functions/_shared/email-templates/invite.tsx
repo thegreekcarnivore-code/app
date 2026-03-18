@@ -14,6 +14,7 @@ import {
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { getEmailLogoUrl } from '../app-config.ts'
 
 interface InviteEmailProps {
   siteName: string
@@ -86,6 +87,7 @@ export const InviteEmail = ({
 }: InviteEmailProps) => {
   const lang = language === 'el' ? 'el' : 'en'
   const c = COPY[lang] || COPY.en
+  const logoUrl = getEmailLogoUrl()
 
   return (
     <Html lang={lang === 'el' ? 'el' : 'en'} dir="ltr">
@@ -94,7 +96,7 @@ export const InviteEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Img
-            src="https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1"
+            src={logoUrl}
             alt="The Greek Carnivore"
             width="80"
             style={logo}

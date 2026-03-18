@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildSupabaseFunctionUrl } from "../_shared/app-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -2297,7 +2298,7 @@ ${lowCarbTipInstruction}`;
             maxDistance: expandedMaxDist,
             fallbackAttempted: true,
           };
-          const selfUrl = `https://lglgmhzgxyvyftdhvdsy.supabase.co/functions/v1/recommend-restaurants`;
+          const selfUrl = buildSupabaseFunctionUrl("recommend-restaurants");
           const fallbackRes = await fetch(selfUrl, {
             method: "POST",
             headers: {

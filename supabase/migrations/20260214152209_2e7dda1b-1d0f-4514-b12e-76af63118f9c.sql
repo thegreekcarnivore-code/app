@@ -1,11 +1,14 @@
 
+-- Enable pgcrypto for gen_random_bytes
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Add approved column to profiles
 ALTER TABLE public.profiles ADD COLUMN approved boolean NOT NULL DEFAULT false;
 
 -- Create invite tokens table
 CREATE TABLE public.invite_tokens (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  token text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+  token text NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   used_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   used_at timestamp with time zone,

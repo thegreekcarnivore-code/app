@@ -1,4 +1,4 @@
-project_id = "lglgmhzgxyvyftdhvdsy"
+project_id = "bowvosskzbtuxmrwatoj"
 
 [functions]
   [functions.analyze-client]
@@ -52,8 +52,6 @@ project_id = "lglgmhzgxyvyftdhvdsy"
   [functions.send-push-notification]
     verify_jwt = false
   [functions.process-call-reminders]
-    verify_jwt = false
-  [functions.process-program-automations]
     verify_jwt = false
   [functions.send-reconnect-email]
     verify_jwt = false

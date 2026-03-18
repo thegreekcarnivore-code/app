@@ -12,6 +12,7 @@ import {
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { getEmailLogoUrl } from '../app-config.ts'
 
 interface ReauthenticationEmailProps {
   token: string
@@ -36,6 +37,7 @@ const COPY = {
 export const ReauthenticationEmail = ({ token, language = 'en' }: ReauthenticationEmailProps) => {
   const t = COPY[language as keyof typeof COPY] || COPY.en
   const lang = language === 'el' ? 'el' : 'en'
+  const logoUrl = getEmailLogoUrl()
 
   return (
     <Html lang={lang} dir="ltr">
@@ -44,7 +46,7 @@ export const ReauthenticationEmail = ({ token, language = 'en' }: Reauthenticati
       <Body style={main}>
         <Container style={container}>
           <Img
-            src="https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1"
+            src={logoUrl}
             alt="The Greek Carnivore"
             width="80"
             style={logo}

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { buildAppUrl, getAppBaseUrl } from "../_shared/app-config.ts";
+import { buildAppUrl, getAppBaseUrl, getEmailLogoUrl } from "../_shared/app-config.ts";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -9,7 +9,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 const FROM_EMAIL = "The Greek Carnivore <noreply@thegreekcarnivore.com>";
-const LOGO_URL = "https://lglgmhzgxyvyftdhvdsy.supabase.co/storage/v1/object/public/email-assets/logo.png?v=1";
+const LOGO_URL = getEmailLogoUrl();
 const APP_URL = getAppBaseUrl();
 
 function formatGreekDate(dateStr: string): string {

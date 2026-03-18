@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SignatureCanvas from "@/components/onboarding/SignatureCanvas";
 import ReactMarkdown from "react-markdown";
-import { CheckCircle2, Globe } from "lucide-react";
+import { CheckCircle2, Globe, ShieldCheck, FileSignature, Sparkles } from "lucide-react";
 
 const POLICY_VERSION = "1.0";
 
@@ -208,32 +208,77 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
 
   // Show the policy document
   const policyText = docLang === "el" ? POLICY_EL : POLICY_EN;
+  const setupPoints = [
+    {
+      icon: ShieldCheck,
+      title: docLang === "el" ? "Καθαρό πλαίσιο συνεργασίας" : "Clear coaching framework",
+      body: docLang === "el"
+        ? "Εξηγεί πώς δουλεύει το πρόγραμμα, τι περιμένουμε και πώς προστατεύεται η εμπειρία σου."
+        : "Explains how the program works, what is expected, and how your coaching experience is protected.",
+    },
+    {
+      icon: FileSignature,
+      title: docLang === "el" ? "Ένα τελευταίο βήμα setup" : "One final setup step",
+      body: docLang === "el"
+        ? "Μόλις υπογράψεις, το dashboard και το υπόλοιπο onboarding ανοίγουν κανονικά."
+        : "As soon as you sign, your dashboard and the rest of onboarding open normally.",
+    },
+  ];
 
   return (
     <div className="fixed inset-0 z-[200] bg-background flex flex-col">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-lg font-semibold text-foreground">
-            {docLang === "el" ? "Πολιτικές & Διαδικασίες" : "Policies & Procedures"}
-          </h1>
-          <p className="font-sans text-xs text-muted-foreground">
-            {docLang === "el"
-              ? "Παρακαλώ διαβάστε και υπογράψτε για να συνεχίσετε"
-              : "Please read and sign to continue"}
-          </p>
+      <div className="border-b border-border px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
+              <Sparkles className="h-3 w-3" />
+              {docLang === "el" ? "Τελικό setup" : "Final setup"}
+            </div>
+            <div>
+              <h1 className="font-serif text-xl font-semibold text-foreground">
+                {docLang === "el" ? "Ολοκλήρωσε την πρόσβασή σου" : "Complete your access setup"}
+              </h1>
+              <p className="font-sans text-sm leading-relaxed text-muted-foreground">
+                {docLang === "el"
+                  ? "Αυτό είναι το τελευταίο βήμα πριν ανοίξει πλήρως το coaching dashboard σου."
+                  : "This is the last step before your coaching dashboard opens fully."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden rounded-2xl border border-border/70 bg-card px-3 py-2 text-right sm:block">
+              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
+                {docLang === "el" ? "Βήμα 1/1" : "Step 1/1"}
+              </p>
+              <p className="font-sans text-xs text-muted-foreground">
+                {docLang === "el" ? "Διαβάζεις, υπογράφεις, συνεχίζεις" : "Read, sign, continue"}
+              </p>
+            </div>
+            <button
+              onClick={() => setDocLang(docLang === "el" ? "en" : "el")}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-sans text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              {docLang === "el" ? "English" : "Ελληνικά"}
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setDocLang(docLang === "el" ? "en" : "el")}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-sans text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-        >
-          <Globe className="h-3.5 w-3.5" />
-          {docLang === "el" ? "English" : "Ελληνικά"}
-        </button>
       </div>
 
       {/* Document content */}
       <ScrollArea className="flex-1 px-6 py-4">
+        <div className="mb-4 grid gap-3 lg:grid-cols-2">
+          {setupPoints.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="rounded-[1.5rem] border border-border/70 bg-card/80 p-4">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gold/10 text-gold">
+                <Icon className="h-5 w-5" />
+              </div>
+              <h2 className="font-serif text-lg font-semibold text-foreground">{title}</h2>
+              <p className="mt-1 font-sans text-sm leading-relaxed text-muted-foreground">{body}</p>
+            </div>
+          ))}
+        </div>
         <div className="prose prose-sm max-w-none font-sans text-foreground
           prose-headings:font-serif prose-headings:text-foreground
           prose-h1:text-xl prose-h2:text-base prose-h2:mt-6 prose-h2:mb-2
@@ -247,7 +292,17 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
       </ScrollArea>
 
       {/* Signing area */}
-      <div className="border-t border-border px-6 py-4 space-y-3 bg-card">
+      <div className="border-t border-border bg-card px-6 py-4 space-y-4">
+        <div className="rounded-[1.5rem] border border-border/70 bg-background/70 p-4">
+          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
+            {docLang === "el" ? "Πριν συνεχίσεις" : "Before you continue"}
+          </p>
+          <p className="mt-1 font-sans text-sm leading-relaxed text-muted-foreground">
+            {docLang === "el"
+              ? "Διάβασε το έγγραφο, γράψε το ονοματεπώνυμό σου και πρόσθεσε την υπογραφή σου. Μόλις αποθηκευτεί, η εφαρμογή θα ανοίξει κανονικά."
+              : "Review the document, type your full name, and add your signature. As soon as it is saved, the app will open normally."}
+          </p>
+        </div>
         <div>
           <Label className="font-sans text-xs">
             {docLang === "el" ? "Ονοματεπώνυμο" : "Full Legal Name"}
