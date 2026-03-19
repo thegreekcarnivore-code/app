@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
       type: "magiclink",
       email,
-      options: { redirectTo: buildAppUrl("/home") },
+      options: { redirectTo: buildAppUrl("/auth") },
     });
     const loginUrl = linkData?.properties?.action_link || buildAppUrl("/auth");
     if (linkError) console.warn("Magic link generation failed, falling back to /auth:", linkError.message);
