@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { buildAppUrl, getEmailLogoUrl } from "../_shared/app-config.ts";
+// buildAppUrl used as fallback login URL when magic link generation fails
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,9 +8,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function buildReconnectHtml(firstName: string, language: string) {
+function buildReconnectHtml(firstName: string, language: string, loginUrl: string) {
   const logoUrl = getEmailLogoUrl();
-  const appUrl = buildAppUrl("/auth");
 
   const isGreek = language === "el";
 
@@ -21,8 +21,8 @@ function buildReconnectHtml(firstName: string, language: string) {
     ? "Σου στελνουμε αυτο το μηνυμα ως υπενθυμιση οτι ο λογαριασμος σου στο The Greek Carnivore ειναι ετοιμος και σε περιμενει."
     : "We're sending you this message as a reminder that your account on The Greek Carnivore is ready and waiting for you.";
   const body3 = isGreek
-    ? "Αν εχεις ξεχασει τον κωδικο σου ή δεν εχεις ορισει ακομα κωδικο, πατησε <strong>\"Ξεχασα τον κωδικο μου\"</strong> στη σελιδα συνδεσης για να τον επαναφερεις."
-    : "If you've forgotten your password or haven't set one up yet, click <strong>\"Forgot Password\"</strong> on the login page to reset it.";
+    ? "Πατα το κουμπι παρακατω για να συνδεθεις απευθειας — δεν χρειαζεται κωδικος."
+    : "Click the button below to log straight in — no password needed.";
   const ctaText = isGreek ? "Συνδεση στην Εφαρμογη" : "Log In to the App";
   const footer = "The Greek Carnivore";
 
@@ -44,7 +44,7 @@ function buildReconnectHtml(firstName: string, language: string) {
     <p style="font-size:14px;color:#666;line-height:1.6;margin:0 0 24px;">
       ${body3}
     </p>
-    <a href="${appUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;">
+    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;">
       ${ctaText}
     </a>
     <p style="font-size:12px;color:#999;margin:32px 0 0;line-height:1.5;">
@@ -125,7 +125,16 @@ Deno.serve(async (req) => {
 
     const firstName = profile?.display_name?.split(" ")[0] || "";
 
-    const html = buildReconnectHtml(firstName, language || "el");
+    // Generate a magic link so the client can log in with one click
+    const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: buildAppUrl("/home") },
+    });
+    const loginUrl = linkData?.properties?.action_link || buildAppUrl("/auth");
+    if (linkError) console.warn("Magic link generation failed, falling back to /auth:", linkError.message);
+
+    const html = buildReconnectHtml(firstName, language || "el", loginUrl);
     const subject = (language || "el") === "el"
       ? "Επιστροφη στο The Greek Carnivore"
       : "Welcome Back to The Greek Carnivore";
