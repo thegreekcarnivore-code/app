@@ -118,7 +118,7 @@ const Auth = () => {
         : "New accounts go through approval before the program opens.",
     },
     {
-      title: lang === "el" ? "3. Ξεκινά το onboarding" : "3. Guided onboarding starts",
+      title: lang === "el" ? "3. Ξεκινά η εισαγωγή" : "3. Guided onboarding starts",
       body: lang === "el"
         ? "Υπογραφή, υλικό προγράμματος και καθημερινό dashboard εμφανίζονται με σωστή σειρά."
         : "Signing, program material, and the daily dashboard appear in the right order.",
@@ -146,7 +146,7 @@ const Auth = () => {
             <img src={logo} alt="The Greek Carnivore" className="h-16 w-auto object-contain" />
             <div className="space-y-3">
               <p className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold">
-                {lang === "el" ? "Coaching portal" : "Coaching portal"}
+                {lang === "el" ? "Πύλη Coaching" : "Coaching portal"}
               </p>
               <h1 className="font-serif text-4xl font-semibold leading-tight text-foreground">
                 {lang === "el"
@@ -182,10 +182,10 @@ const Auth = () => {
               {forgotMode
                 ? (lang === "el" ? "Εισάγετε το email σας για να λάβετε σύνδεσμο επαναφοράς." : "Enter your email to receive a reset link.")
                 : isLogin
-                  ? (lang === "el" ? "Συνδέσου για να συνεχίσεις στο πρόγραμμα και στο καθημερινό σου dashboard." : "Sign in to continue to your program and daily dashboard.")
+                  ? (lang === "el" ? "Συνδέσου για να συνεχίσεις στο πρόγραμμα και στον πίνακα ελέγχου σου." : "Sign in to continue to your program and daily dashboard.")
                   : inviteToken
                     ? (lang === "el" ? "Η πρόσκλησή σου είναι έτοιμη. Δημιούργησε τον λογαριασμό σου για να ενεργοποιηθεί η πρόσβαση." : "Your invite is ready. Create your account to activate access.")
-                    : (lang === "el" ? "Αν έχεις εγκριθεί από τον coach, δημιούργησε λογαριασμό για να ξεκινήσει το onboarding." : "If you have been approved by your coach, create your account to start onboarding.")}
+                    : (lang === "el" ? "Αν έχεις εγκριθεί από τον coach σου, δημιούργησε λογαριασμό για να ξεκινήσει η εισαγωγή." : "If you have been approved by your coach, create your account to start onboarding.")}
             </p>
           </div>
 
@@ -259,8 +259,8 @@ const Auth = () => {
                     </p>
                     <p className="font-sans text-xs leading-relaxed text-muted-foreground">
                       {inviteToken
-                        ? (lang === "el" ? "Η πρόσκλησή σου θα ενεργοποιηθεί, θα μπεις στην εφαρμογή και θα ξεκινήσει η guided ροή setup." : "Your invite will activate, the app will open, and the guided setup flow will begin.")
-                        : (lang === "el" ? "Ο λογαριασμός σου περνάει από approval και μετά ανοίγει το onboarding, το policy signing και το dashboard σου." : "Your account goes through approval and then unlocks onboarding, policy signing, and your daily dashboard.")}
+                        ? (lang === "el" ? "Η πρόσκλησή σου θα ενεργοποιηθεί, θα μπεις στην εφαρμογή και θα ξεκινήσει η καθοδηγούμενη ρύθμιση." : "Your invite will activate, the app will open, and the guided setup flow will begin.")
+                        : (lang === "el" ? "Ο λογαριασμός σου περνάει από έγκριση και μετά ανοίγουν η εισαγωγή, η υπογραφή πολιτικής και ο πίνακας ελέγχου σου." : "Your account goes through approval and then unlocks onboarding, policy signing, and your daily dashboard.")}
                     </p>
                     <p className="font-sans text-[11px] text-muted-foreground">{t("passwordRequirement")}</p>
                   </div>

@@ -595,7 +595,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
       detail: isGreek
         ? "Συνέπεια γευμάτων και καθημερινό nutrition context."
         : "Meal consistency and daily nutrition context.",
-      action: isGreek ? "Άνοιγμα food tab" : "Open food tab",
+      action: isGreek ? "Άνοιγμα καρτέλας φαγητού" : "Open food tab",
     },
     {
       key: "photos" as const,
@@ -604,7 +604,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
       detail: isGreek
         ? "Οπτικό feedback που συμπληρώνει τους αριθμούς."
         : "Visual feedback that complements the numbers.",
-      action: isGreek ? "Άνοιγμα photo tab" : "Open photo tab",
+      action: isGreek ? "Άνοιγμα καρτέλας φωτογραφιών" : "Open photo tab",
     },
   ];
 

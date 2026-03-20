@@ -29,9 +29,9 @@ const BottomNav = () => {
 
   const items = [
     { path: "/home", icon: Home, label: t("home"), guide: "nav-home" },
-    { path: "/discover", icon: Compass, label: lang === "el" ? "Ανακαλυψτε" : "Discover", guide: "nav-discover" },
+    { path: "/discover", icon: Compass, label: lang === "el" ? "Ανακαλύψτε" : "Discover", guide: "nav-discover" },
     ...(hasAccess("measurements") ? [{ path: "/measurements", icon: Ruler, label: t("measurements"), guide: "nav-measurements" }] : []),
-    ...(hasAccess("video_library") ? [{ path: "/learn", icon: Video, label: lang === "el" ? "Μαθηματα" : "Learn", guide: "nav-learn" }] : []),
+    ...(hasAccess("video_library") ? [{ path: "/learn", icon: Video, label: lang === "el" ? "Μαθήματα" : "Learn", guide: "nav-learn" }] : []),
     ...(hasAccess("community") ? [{ path: "/community", icon: Users, label: lang === "el" ? "Κοινότητα" : "Community", guide: "nav-community" }] : []),
     ...(isAdmin ? [
       { path: "/admin", icon: Shield, label: "Admin", guide: "nav-admin" },

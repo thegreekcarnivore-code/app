@@ -223,13 +223,13 @@ const Home = () => {
       key: "photos",
       icon: Camera,
       label: isGreek ? "Φωτογραφίες Προόδου" : "Progress Photos",
-      hint: isGreek ? "Άνοιξε το φωτογραφικό check-in" : "Open the photo check-in",
+      hint: isGreek ? "Άνοιξε τον φωτογραφικό έλεγχο" : "Open the photo check-in",
       onClick: () => navigate("/measurements?tab=photos"),
     },
     {
       key: "journal",
       icon: HeartPulse,
-      label: isGreek ? "Ημερήσιο Check-In" : "Daily Check-In",
+      label: isGreek ? "Ημερήσια Καταγραφή" : "Daily Check-In",
       hint: isGreek
         ? "Κατέγραψε συμπτώματα, ενέργεια, σκέψεις και αντιδράσεις."
         : "Record symptoms, energy, thoughts, and reactions.",
@@ -256,7 +256,7 @@ const Home = () => {
           <div className="flex items-baseline justify-between gap-2">
             <div>
               <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.24em] text-gold mb-0.5">
-                {isGreek ? "Το coaching dashboard σου" : "Your coaching dashboard"}
+                {isGreek ? "Ο πίνακας coaching σου" : "Your coaching dashboard"}
               </p>
               <h1 className="font-serif text-2xl font-semibold text-foreground">
                 {isGreek ? `Γεια σου ${vocativeName || firstName}` : `Hello, ${firstName}`}!
@@ -286,7 +286,7 @@ const Home = () => {
           <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
             {currentWeek && totalWeeks
               ? isGreek
-                ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμο θα είναι το επόμενο review.`
+                ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμη θα είναι η επόμενη ανασκόπηση.`
                 : `You are in week ${currentWeek} of ${totalWeeks}. The consistency of this week will shape how useful the next review becomes.`
               : isGreek
                 ? "Δεν έχεις ακόμα ενεργό πρόγραμμα."
@@ -376,20 +376,20 @@ const Home = () => {
         <div className="rounded-[1.75rem] border border-gold/20 bg-background/80 p-4">
           <div className="space-y-2">
             <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
-              {isGreek ? "Επόμενο accountability step" : "Next accountability step"}
+              {isGreek ? "Επόμενο βήμα υπευθυνότητας" : "Next accountability step"}
             </p>
             <h2 className="font-serif text-xl font-semibold text-foreground">
               {nextCheckInLabel
-                ? (isGreek ? "Κράτα έτοιμο το εβδομαδιαίο σου review" : "Keep your next weekly review ready")
+                ? (isGreek ? "Κράτα έτοιμη την εβδομαδιαία σου ανασκόπηση" : "Keep your next weekly review ready")
                 : (isGreek ? "Μην αφήσεις κενά στα δεδομένα σου" : "Do not let your data go cold")}
             </h2>
             <p className="font-sans text-sm leading-relaxed text-muted-foreground">
               {nextCheckInLabel
                 ? isGreek
-                  ? `Το επόμενο check-in αναμένεται ${nextCheckInLabel}. Βάλε μετρήσεις, φωτογραφίες και food logs πριν από τότε για πιο ουσιαστικό feedback.`
+                  ? `Το επόμενο check-in αναμένεται ${nextCheckInLabel}. Βάλε μετρήσεις, φωτογραφίες και καταγραφές φαγητού πριν από τότε για πιο ουσιαστικά αποτελέσματα.`
                   : `Your next check-in is expected ${nextCheckInLabel}. Add measurements, photos, and food logs before then for stronger feedback.`
                 : isGreek
-                  ? "Άνοιξε τις μετρήσεις και κράτα σώμα, φαγητό και φωτογραφίες ενημερωμένα για να έχει νόημα το coaching review."
+                  ? "Άνοιξε τις μετρήσεις και κράτα σώμα, φαγητό και φωτογραφίες ενημερωμένα για να έχει νόημα η ανασκόπηση coaching."
                   : "Open measurements and keep body, food, and photos updated so your coaching review stays meaningful."}
             </p>
             <button

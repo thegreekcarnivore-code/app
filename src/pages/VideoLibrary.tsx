@@ -556,7 +556,7 @@ const VideoLibrary = () => {
                   </div>
                   <div className="text-center rounded-xl bg-muted/40 py-2.5 px-1">
                     <p className="font-sans text-lg font-bold text-foreground">{completedModules}</p>
-                    <p className="font-sans text-[9px] text-muted-foreground leading-tight">{isGreek ? "Modules" : "Modules"}<br />{isGreek ? "ολοκληρώθηκαν" : "done"}</p>
+                    <p className="font-sans text-[9px] text-muted-foreground leading-tight">{isGreek ? "Ενότητες" : "Modules"}<br />{isGreek ? "ολοκληρώθηκαν" : "done"}</p>
                   </div>
                   <div className="text-center rounded-xl bg-muted/40 py-2.5 px-1">
                     <p className="font-sans text-lg font-bold text-gold">{overallProgress}%</p>

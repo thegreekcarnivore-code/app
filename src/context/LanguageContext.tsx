@@ -7,7 +7,7 @@ type Lang = "en" | "el";
 const translations = {
   // Branding
   appName: { en: "The Greek Carnivore", el: "The Greek Carnivore" },
-  subtitle: { en: "Food Concierge", el: "Συμβουλος Διατροφης" },
+  subtitle: { en: "Food Concierge", el: "Σύμβουλος Διατροφής" },
 
   // Common
   back: { en: "← Back", el: "← Πίσω" },
@@ -31,7 +31,7 @@ const translations = {
   verifyingRestaurants: { en: "Curating the finest spots just for you…", el: "Επιλέγουμε τα καλύτερα μέρη ειδικά για εσάς…" },
 
   // Delivery page
-  delivery: { en: "Delivery", el: "Delivery" },
+  delivery: { en: "Delivery", el: "Παράδοση" },
   foodAtYourDoor: { en: "Food at Your Door", el: "Φαγητό στην Πόρτα σας" },
   deliveryDescription: { en: "Share your location to find the best delivery options nearby.", el: "Μοιραστείτε την τοποθεσία σας για τις καλύτερες επιλογές παράδοσης." },
   deliveryOptions: { en: "Delivery Options", el: "Επιλογες Παραδοσης" },
@@ -174,7 +174,7 @@ const translations = {
   shopping: { en: "Shopping", el: "Ψωνια" },
   recipes: { en: "Recipes", el: "Συνταγές" },
   videos: { en: "Videos", el: "Βίντεο" },
-  measurements: { en: "Accountability", el: "Υπευθυνοτητα" },
+  measurements: { en: "Accountability", el: "Υπευθυνότητα" },
   community: { en: "Community", el: "Κοινότητα" },
 
   // Shopping page
