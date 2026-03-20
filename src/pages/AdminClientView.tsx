@@ -303,9 +303,27 @@ const AdminClientView = () => {
         )}
       </h1>
 
+      {/* Sticky anchor nav */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 py-2 bg-background/90 backdrop-blur border-b border-border/40 mb-4 flex gap-2 overflow-x-auto">
+        {[
+          { id: "section-profile", en: "Profile", el: "Προφίλ" },
+          { id: "section-program", en: "Program", el: "Πρόγραμμα" },
+          { id: "section-forms", en: "Forms", el: "Φόρμες" },
+          { id: "section-measurements", en: "Measurements", el: "Μετρήσεις" },
+        ].map(({ id, en, el: elLabel }) => (
+          <button
+            key={id}
+            onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="shrink-0 rounded-full bg-muted px-3.5 py-1.5 font-sans text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+          >
+            {lang === "en" ? en : elLabel}
+          </button>
+        ))}
+      </div>
+
       {/* Profile info card */}
       {!isDataOnly && profile && (
-        <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+        <div id="section-profile" className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
@@ -425,7 +443,7 @@ const AdminClientView = () => {
       )}
 
       {/* Program section */}
-      {!isDataOnly && <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+      {!isDataOnly && <div id="section-program" className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-primary" />
@@ -535,7 +553,7 @@ const AdminClientView = () => {
 
       {/* Signed Forms section */}
       {!isDataOnly && signedForms && signedForms.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
+        <div id="section-forms" className="rounded-xl border border-border bg-card p-4 mb-6 space-y-3">
           <div className="flex items-center gap-2">
             <FileSignature className="h-4 w-4 text-primary" />
             <span className="font-sans text-sm font-semibold text-foreground">
@@ -617,7 +635,7 @@ const AdminClientView = () => {
       </Dialog>
 
       {/* Measurement tabs */}
-      <div className="flex gap-1 rounded-lg border border-border bg-card p-1 mb-6">
+      <div id="section-measurements" className="flex gap-1 rounded-lg border border-border bg-card p-1 mb-6">
         {measurementTabs.map(({ key, icon: Icon, en, el }) => (
           <button
             key={key}

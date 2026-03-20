@@ -647,7 +647,7 @@ const Admin = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {ADMIN_TABS.map(({ key, label, icon: Icon }) => (
+              {ADMIN_TABS.filter(t => ["users","invites","programs","finance"].includes(t.key)).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
@@ -655,6 +655,17 @@ const Admin = () => {
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {key === "users" ? `${label} (${users.length + orphanInvitations.length})` : label}
+                </button>
+              ))}
+              <div className="w-px self-stretch bg-border/60 mx-1 shrink-0" />
+              {ADMIN_TABS.filter(t => ["calls","categories","todo","groups"].includes(t.key)).map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`inline-flex min-w-fit items-center gap-1.5 rounded-full px-2.5 py-1.5 font-sans text-[11px] font-medium transition-all ${activeTab === key ? "bg-gold/20 text-gold" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {label}
                 </button>
               ))}
             </div>

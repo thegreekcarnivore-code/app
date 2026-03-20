@@ -1,4 +1,4 @@
-import { Home, Compass, Ruler, Shield, Video, ChefHat, Users } from "lucide-react";
+import { Home, Compass, Ruler, Shield, Video, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
@@ -34,7 +34,6 @@ const BottomNav = () => {
     ...(hasAccess("video_library") ? [{ path: "/learn", icon: Video, label: lang === "el" ? "Μαθηματα" : "Learn", guide: "nav-learn" }] : []),
     ...(hasAccess("community") ? [{ path: "/community", icon: Users, label: lang === "el" ? "Κοινότητα" : "Community", guide: "nav-community" }] : []),
     ...(isAdmin ? [
-      { path: "/resources", icon: ChefHat, label: lang === "el" ? "Συνταγές" : "Recipes", guide: "nav-resources" },
       { path: "/admin", icon: Shield, label: "Admin", guide: "nav-admin" },
     ] : []),
   ];

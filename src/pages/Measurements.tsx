@@ -870,28 +870,21 @@ const Measurements = ({ userId }: MeasurementsProps) => {
           ))}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="flex gap-2">
           {tabs.map(({ key, icon: Icon, en, el }) => (
             <button
               key={key}
               data-guide={`measurements-${key}`}
               onClick={() => setActiveTab(key)}
               className={cn(
-                "rounded-2xl border p-4 text-left transition-all",
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 font-sans text-sm font-medium transition-all",
                 activeTab === key
-                  ? "border-gold/40 bg-gold/10 shadow-sm"
-                  : "border-border bg-card hover:border-border/80 hover:shadow-sm",
+                  ? "bg-gold text-gold-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
-              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-background text-gold shadow-sm">
-                <Icon className="h-5 w-5" />
-              </div>
-              <p className="font-sans text-sm font-semibold text-foreground">
-                {lang === "en" ? en : el}
-              </p>
-              <p className="mt-1 text-xs font-sans leading-relaxed text-muted-foreground">
-                {tabDescriptions[key][lang]}
-              </p>
+              <Icon className="h-4 w-4 shrink-0" />
+              {lang === "en" ? en : el}
             </button>
           ))}
         </div>
