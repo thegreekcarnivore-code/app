@@ -252,37 +252,25 @@ const Home = () => {
         animate={{ opacity: 1, y: 0 }}
         className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-3.5 md:p-4 shadow-sm"
       >
-        <div className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[0.9fr,1.1fr] lg:items-start">
-            <div className="space-y-1.5">
-              <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <div>
+              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.24em] text-gold mb-0.5">
                 {isGreek ? "Το coaching dashboard σου" : "Your coaching dashboard"}
               </p>
-              <h1 className="font-serif text-3xl font-semibold text-foreground">
+              <h1 className="font-serif text-2xl font-semibold text-foreground">
                 {isGreek ? `Γεια σου ${vocativeName || firstName}` : `Hello, ${firstName}`}!
               </h1>
-              <p className="font-sans text-sm text-muted-foreground capitalize">{dateStr}</p>
             </div>
+            <p className="font-sans text-sm text-muted-foreground capitalize shrink-0">{dateStr}</p>
+          </div>
 
-            <div className="rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm">
-              <div className="space-y-1">
-                <h2 className="font-serif text-lg font-semibold text-foreground">
-                  {isGreek ? "Σημερινή Εστίαση" : "Today's Focus"}
-                </h2>
-                <p className="font-sans text-sm text-muted-foreground">
-                  {isGreek
-                    ? "Ολοκλήρωσε πρώτα τα βασικά βήματα που κρατούν το πρόγραμμα σε ρυθμό."
-                    : "Clear the core actions first so your coaching rhythm stays intact."}
-                </p>
-              </div>
-              <div className="mt-3">
-                <DailyTasksCard
-                  onOpenFoodForm={() => setFoodFormOpen(true)}
-                  onOpenMeasurements={() => setMeasurementFormOpen(true)}
-                  onOpenPhotos={() => navigate("/measurements?tab=photos")}
-                />
-              </div>
-            </div>
+          <div className="rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm">
+            <DailyTasksCard
+              onOpenFoodForm={() => setFoodFormOpen(true)}
+              onOpenMeasurements={() => setMeasurementFormOpen(true)}
+              onOpenPhotos={() => navigate("/measurements?tab=photos")}
+            />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[1.05fr,0.95fr] lg:items-start">
