@@ -16,7 +16,15 @@ import GuideSpotlight from "./components/GuideSpotlight";
 import { GuideHighlightProvider } from "./context/GuideHighlightContext";
 import PolicySigningGate from "./components/PolicySigningGate";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+    },
+  },
+});
 
 const Landing = lazy(() => import("./pages/Landing"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));

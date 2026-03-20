@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 
 export type SavedSource = "restaurant" | "delivery" | "explore" | "shopping";
 
@@ -45,29 +45,31 @@ export const SavedRestaurantsProvider = ({ children }: { children: ReactNode }) 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   }, [saved]);
 
-  const addRestaurant = (restaurant: Omit<SavedRestaurant, "id" | "savedAt">) => {
+  const addRestaurant = useCallback((restaurant: Omit<SavedRestaurant, "id" | "savedAt">) => {
     const newItem: SavedRestaurant = {
       ...restaurant,
       id: `${restaurant.name}-${restaurant.city}-${Date.now()}`,
       savedAt: new Date().toISOString(),
     };
     setSaved((prev) => [...prev, newItem]);
-  };
+  }, []);
 
-  const removeRestaurant = (id: string) => {
+  const removeRestaurant = useCallback((id: string) => {
     setSaved((prev) => prev.filter((r) => r.id !== id));
-  };
+  }, []);
 
-  const isSaved = (name: string, city: string) => {
+  const isSaved = useCallback((name: string, city: string) => {
     return saved.some((r) => r.name === name && r.city === city);
-  };
+  }, [saved]);
 
-  const getSavedBySource = (source: SavedSource) => {
+  const getSavedBySource = useCallback((source: SavedSource) => {
     return saved.filter((r) => r.source === source);
-  };
+  }, [saved]);
+
+  const value = useMemo(() => ({ saved, addRestaurant, removeRestaurant, isSaved, getSavedBySource }), [saved, addRestaurant, removeRestaurant, isSaved, getSavedBySource]);
 
   return (
-    <SavedRestaurantsContext.Provider value={{ saved, addRestaurant, removeRestaurant, isSaved, getSavedBySource }}>
+    <SavedRestaurantsContext.Provider value={value}>
       {children}
     </SavedRestaurantsContext.Provider>
   );

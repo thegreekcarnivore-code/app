@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const BottomNav = () => {
@@ -12,9 +12,11 @@ const BottomNav = () => {
   const { t, lang } = useLanguage();
   const { isAdmin, user } = useAuth();
   const [featureAccess, setFeatureAccess] = useState<Record<string, boolean>>({});
+  const fetchedFor = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || fetchedFor.current === user.id) return;
+    fetchedFor.current = user.id;
     supabase
       .from("profiles")
       .select("feature_access")
@@ -25,18 +27,17 @@ const BottomNav = () => {
       });
   }, [user]);
 
-  const hasAccess = (key: string) => isAdmin || featureAccess[key] !== false;
-
-  const items = [
-    { path: "/home", icon: Home, label: t("home"), guide: "nav-home" },
-    { path: "/discover", icon: Compass, label: lang === "el" ? "Ανακαλύψτε" : "Discover", guide: "nav-discover" },
-    ...(hasAccess("measurements") ? [{ path: "/measurements", icon: Ruler, label: t("measurements"), guide: "nav-measurements" }] : []),
-    ...(hasAccess("video_library") ? [{ path: "/learn", icon: Video, label: lang === "el" ? "Μαθήματα" : "Learn", guide: "nav-learn" }] : []),
-    ...(hasAccess("community") ? [{ path: "/community", icon: Users, label: lang === "el" ? "Κοινότητα" : "Community", guide: "nav-community" }] : []),
-    ...(isAdmin ? [
-      { path: "/admin", icon: Shield, label: "Admin", guide: "nav-admin" },
-    ] : []),
-  ];
+  const items = useMemo(() => {
+    const hasAccess = (key: string) => isAdmin || featureAccess[key] !== false;
+    return [
+      { path: "/home", icon: Home, label: t("home"), guide: "nav-home" },
+      { path: "/discover", icon: Compass, label: lang === "el" ? "Ανακαλύψτε" : "Discover", guide: "nav-discover" },
+      ...(hasAccess("measurements") ? [{ path: "/measurements", icon: Ruler, label: t("measurements"), guide: "nav-measurements" }] : []),
+      ...(hasAccess("video_library") ? [{ path: "/learn", icon: Video, label: lang === "el" ? "Μαθήματα" : "Learn", guide: "nav-learn" }] : []),
+      ...(hasAccess("community") ? [{ path: "/community", icon: Users, label: lang === "el" ? "Κοινότητα" : "Community", guide: "nav-community" }] : []),
+      ...(isAdmin ? [{ path: "/admin", icon: Shield, label: "Admin", guide: "nav-admin" }] : []),
+    ];
+  }, [isAdmin, featureAccess, lang, t]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gold/15 glass">

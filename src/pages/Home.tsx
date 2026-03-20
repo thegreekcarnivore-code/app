@@ -100,7 +100,8 @@ const Home = () => {
           .order("sort_order"),
         supabase
           .from("recipes" as any)
-          .select("category"),
+          .select("category")
+          .limit(500),
         supabase
           .from("client_program_enrollments")
           .select("start_date, weekly_day, duration_weeks_override, program_template:program_templates(name, duration_weeks)")
@@ -250,7 +251,7 @@ const Home = () => {
       <motion.section
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-3.5 md:p-4 shadow-sm"
+        className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-3.5 md:p-4 shadow-sm"
       >
         <div className="space-y-3">
           <div className="flex items-baseline justify-between gap-2">

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 interface PageActions {
   hasSaved: boolean;
@@ -41,8 +41,10 @@ export const PageActionsProvider = ({ children }: { children: React.ReactNode })
     setActions(defaultActions);
   }, []);
 
+  const value = useMemo(() => ({ actions, registerActions, clearActions }), [actions, registerActions, clearActions]);
+
   return (
-    <PageActionsContext.Provider value={{ actions, registerActions, clearActions }}>
+    <PageActionsContext.Provider value={value}>
       {children}
     </PageActionsContext.Provider>
   );

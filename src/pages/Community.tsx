@@ -6,7 +6,7 @@ const Community = () => {
 
   return (
     <div className="space-y-4 px-1 pt-14 pb-24">
-      <section className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 shadow-sm">
+      <section className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-4 shadow-sm">
         <div className="space-y-2">
           <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
             {lang === "el" ? "Κοινότητα" : "Community"}

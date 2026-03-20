@@ -95,7 +95,7 @@ const MeasurementReminderBanner = () => {
         initial={{ opacity: 0, y: -8, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.98 }}
-        className="relative mb-4 overflow-hidden rounded-[1.5rem] border border-gold/25 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 shadow-sm"
+        className="relative mb-4 overflow-hidden rounded-[1.5rem] border border-gold/25 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-4 shadow-sm"
       >
         <button
           onClick={() => setDismissed(true)}

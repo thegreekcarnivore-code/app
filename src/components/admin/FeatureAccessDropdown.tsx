@@ -98,7 +98,7 @@ const FeatureAccessDropdown = ({ featureKey, label }: FeatureAccessDropdownProps
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 overflow-hidden rounded-3xl border border-border/70 p-0 shadow-xl" align="end">
-        <div className="border-b border-border bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] px-4 py-3.5">
+        <div className="border-b border-border bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] px-4 py-3.5">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.2em] text-gold">
             <Sparkles className="h-3 w-3" />
             Access control

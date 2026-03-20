@@ -250,7 +250,7 @@ const Resources = () => {
 
   return (
     <div className="pt-16 pb-4 space-y-6">
-      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-5 shadow-sm">
+      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-5 shadow-sm">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-1">

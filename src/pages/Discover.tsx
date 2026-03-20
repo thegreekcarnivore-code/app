@@ -98,7 +98,7 @@ const Discover = () => {
 
   return (
     <div className="pt-14 pb-24 px-5 space-y-4">
-      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 shadow-sm">
+      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-4 shadow-sm">
         <div className="space-y-2">
           <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
             {isGreek ? "Υποστήριξη εκτός σπιτιού" : "Out-of-home support"}

@@ -610,7 +610,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5">
-      <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-5 shadow-sm">
+      <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-5 shadow-sm">
         <div className="space-y-5">
           <div
             data-guide="measurements-weekly-checkin"

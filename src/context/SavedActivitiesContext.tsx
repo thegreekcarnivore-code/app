@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 
 export interface SavedActivity {
   id: string;
@@ -43,29 +43,31 @@ export const SavedActivitiesProvider = ({ children }: { children: ReactNode }) =
     localStorage.setItem(STORAGE_KEY, JSON.stringify(savedActivities));
   }, [savedActivities]);
 
-  const addActivity = (activity: Omit<SavedActivity, "id" | "savedAt">) => {
+  const addActivity = useCallback((activity: Omit<SavedActivity, "id" | "savedAt">) => {
     const newItem: SavedActivity = {
       ...activity,
       id: `${activity.name}-${activity.city}-${Date.now()}`,
       savedAt: new Date().toISOString(),
     };
     setSavedActivities((prev) => [...prev, newItem]);
-  };
+  }, []);
 
-  const removeActivity = (id: string) => {
+  const removeActivity = useCallback((id: string) => {
     setSavedActivities((prev) => prev.filter((a) => a.id !== id));
-  };
+  }, []);
 
-  const isSaved = (name: string, city: string) => {
+  const isSaved = useCallback((name: string, city: string) => {
     return savedActivities.some((a) => a.name === name && a.city === city);
-  };
+  }, [savedActivities]);
 
-  const getActivityId = (name: string, city: string) => {
+  const getActivityId = useCallback((name: string, city: string) => {
     return savedActivities.find((a) => a.name === name && a.city === city)?.id;
-  };
+  }, [savedActivities]);
+
+  const value = useMemo(() => ({ savedActivities, addActivity, removeActivity, isSaved, getActivityId }), [savedActivities, addActivity, removeActivity, isSaved, getActivityId]);
 
   return (
-    <SavedActivitiesContext.Provider value={{ savedActivities, addActivity, removeActivity, isSaved, getActivityId }}>
+    <SavedActivitiesContext.Provider value={value}>
       {children}
     </SavedActivitiesContext.Provider>
   );

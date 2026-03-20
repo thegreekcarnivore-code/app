@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 interface GuideStep {
   navigate?: string;
@@ -88,8 +88,10 @@ export const GuideHighlightProvider = ({ children }: { children: React.ReactNode
     });
   }, [startStep]);
 
+  const value = useMemo(() => ({ state, showHighlight, dismissHighlight, advanceStep }), [state, showHighlight, dismissHighlight, advanceStep]);
+
   return (
-    <GuideHighlightContext.Provider value={{ state, showHighlight, dismissHighlight, advanceStep }}>
+    <GuideHighlightContext.Provider value={value}>
       {children}
     </GuideHighlightContext.Provider>
   );

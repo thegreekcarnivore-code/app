@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 interface GuideStep {
   navigate?: string;
@@ -36,17 +36,21 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [requestTour, setRequestTour] = useState(false);
 
   // Opening one closes the other
-  const setChatOpen = (open: boolean) => {
+  const setChatOpen = useCallback((open: boolean) => {
     setChatOpenRaw(open);
     if (open) setAssistantOpenRaw(false);
-  };
-  const setAssistantOpen = (open: boolean) => {
+  }, []);
+  const setAssistantOpen = useCallback((open: boolean) => {
     setAssistantOpenRaw(open);
     if (open) setChatOpenRaw(false);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    chatOpen, setChatOpen, assistantOpen, setAssistantOpen, pendingGuide, setPendingGuide, requestTour, setRequestTour,
+  }), [chatOpen, setChatOpen, assistantOpen, setAssistantOpen, pendingGuide, requestTour]);
 
   return (
-    <ChatContext.Provider value={{ chatOpen, setChatOpen, assistantOpen, setAssistantOpen, pendingGuide, setPendingGuide, requestTour, setRequestTour }}>
+    <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>
   );

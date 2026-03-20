@@ -14,7 +14,7 @@ const NotFound = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(var(--beige))_0%,_hsl(var(--beige-dark)/0.3)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(var(--beige))_0%,_hsl(var(--beige-dark)/0.3)_100%)] dark:[background-image:none]" />
       <div className="relative z-10 text-center space-y-4 max-w-xs">
         <img src={logo} alt="The Greek Carnivore" className="mx-auto h-14 w-auto object-contain opacity-80" />
         <div className="space-y-1">

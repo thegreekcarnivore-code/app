@@ -169,7 +169,8 @@ const Admin = () => {
     const { data } = await supabase
       .from("profiles")
       .select("id, email, display_name, created_at, approved, last_login_at" as any)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(300);
     if (data) setUsers(data as any);
   };
 
@@ -190,7 +191,9 @@ const Admin = () => {
   const fetchCosts = async () => {
     const { data } = await supabase
       .from("api_usage" as any)
-      .select("user_id, service, estimated_cost");
+      .select("user_id, service, estimated_cost")
+      .order("created_at" as any, { ascending: false })
+      .limit(5000);
     if (data) {
       const map = new Map<string, UserCost>();
       for (const row of data as any[]) {
@@ -265,7 +268,8 @@ const Admin = () => {
     const { data } = await supabase
       .from("ai_chat_messages")
       .select("user_id")
-      .eq("role", "user");
+      .eq("role", "user")
+      .limit(5000);
     if (data) {
       const map = new Map<string, number>();
       for (const row of data as any[]) {

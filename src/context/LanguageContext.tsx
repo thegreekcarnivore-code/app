@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { stripGreekAccents } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -270,15 +270,17 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     loadFromProfile();
   }, []);
 
-  const toggleLanguage = () => setLang((prev) => (prev === "en" ? "el" : "en"));
-  const t = (key: TranslationKey) => translations[key][lang];
-  const tUp = (key: TranslationKey) => {
+  const toggleLanguage = useCallback(() => setLang((prev) => (prev === "en" ? "el" : "en")), []);
+  const t = useCallback((key: TranslationKey) => translations[key][lang], [lang]);
+  const tUp = useCallback((key: TranslationKey) => {
     const text = translations[key][lang];
     return lang === "el" ? stripGreekAccents(text) : text;
-  };
+  }, [lang]);
+
+  const value = useMemo(() => ({ lang, toggleLanguage, t, tUp }), [lang, toggleLanguage, t, tUp]);
 
   return (
-    <LanguageContext.Provider value={{ lang, toggleLanguage, t, tUp }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

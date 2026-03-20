@@ -54,40 +54,48 @@
   }
 
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 30 14% 95%;
+    /* #050505 */
+    --background: 0 0% 2%;
+    /* #F5F2EB */
+    --foreground: 40 47% 94%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 30 14% 95%;
+    /* #111111 */
+    --card: 0 0% 7%;
+    --card-foreground: 40 47% 94%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 30 14% 95%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 40 47% 94%;
 
-    --primary: 40 33% 58%;
-    --primary-foreground: 0 0% 8%;
+    /* #CFA86A */
+    --primary: 38 54% 62%;
+    --primary-foreground: 0 0% 2%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 30 14% 90%;
+    /* #2a2520 */
+    --secondary: 28 14% 14%;
+    --secondary-foreground: 40 30% 88%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 30 10% 60%;
+    --muted: 28 10% 11%;
+    /* #B5B5B5 */
+    --muted-foreground: 0 0% 71%;
 
-    --accent: 0 0% 15%;
-    --accent-foreground: 30 14% 95%;
+    --accent: 28 14% 14%;
+    --accent-foreground: 40 47% 94%;
 
-    --destructive: 0 62% 40%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 40 33% 58%;
+    /* borders: slightly above card */
+    --border: 28 12% 18%;
+    --input: 28 10% 11%;
+    --ring: 38 54% 62%;
 
-    --gold: 40 33% 58%;
-    --gold-foreground: 0 0% 8%;
-    --charcoal: 0 0% 10%;
-    --charcoal-light: 0 0% 18%;
-    --beige: 30 14% 95%;
-    --beige-dark: 30 10% 88%;
+    /* #CFA86A */
+    --gold: 38 54% 62%;
+    --gold-foreground: 0 0% 2%;
+    --charcoal: 0 0% 2%;
+    --charcoal-light: 28 14% 14%;
+    --beige: 28 14% 14%;
+    --beige-dark: 0 0% 7%;
   }
 }
 
@@ -99,6 +107,58 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+
+  .dark body {
+    background: radial-gradient(circle at top left, #2a2520 0%, #111111 45%, #050505 100%);
+    color: #E0E0E0;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Dark mode — bubble behind headings */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 0.08em 0.55em;
+    border-radius: 0.45em;
+    line-height: 1.65;
+  }
+
+  /* Dark mode — bubble behind section labels (small uppercase text) */
+  .dark p.uppercase,
+  .dark span.uppercase {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.15em 0.6em;
+    border-radius: 0.4em;
+  }
+
+  /* Dark mode — subtle bubble behind description text */
+  .dark p.text-muted-foreground {
+    display: inline;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.1em 0.4em;
+    border-radius: 0.35em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    line-height: 1.9;
+  }
+
+  /* Card depth in dark mode */
+  .dark .shadow-sm {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+  .dark .shadow-md {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.3);
+  }
+  .dark .shadow-lg {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 16px 48px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Scrollbar */
+  .dark ::-webkit-scrollbar { width: 5px; height: 5px; }
+  .dark ::-webkit-scrollbar-track { background: hsl(22 12% 7%); }
+  .dark ::-webkit-scrollbar-thumb { background: hsl(28 14% 22%); border-radius: 4px; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: hsl(38 30% 32%); }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
