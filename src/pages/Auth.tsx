@@ -143,7 +143,7 @@ const Auth = () => {
       >
         <div className="hidden rounded-[2rem] border border-border/60 bg-card/80 p-8 shadow-lg shadow-black/5 backdrop-blur lg:block">
           <div className="space-y-5">
-            <img src={logo} alt="The Greek Carnivore" className="h-24 w-auto object-contain" />
+            <img src={logo} alt="The Greek Carnivore" className="h-16 w-auto object-contain" />
             <div className="space-y-3">
               <p className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold">
                 {lang === "el" ? "Coaching portal" : "Coaching portal"}
@@ -171,9 +171,9 @@ const Auth = () => {
           </div>
         </div>
 
-        <div className="space-y-5 rounded-[2rem] border border-border/60 bg-card/90 p-6 shadow-lg shadow-black/5 backdrop-blur sm:p-8">
+        <div className="space-y-4 rounded-[2rem] border border-border/60 bg-card/90 p-5 shadow-lg shadow-black/5 backdrop-blur sm:p-6">
           <div className="space-y-3 text-center">
-            <img src={logo} alt="The Greek Carnivore" className="mx-auto h-24 w-auto object-contain" />
+            <img src={logo} alt="The Greek Carnivore" className="mx-auto h-16 w-auto object-contain" />
             <div className="space-y-1">
               <h1 className="font-serif text-2xl font-semibold text-foreground">{t("appName")}</h1>
               <p className="text-[10px] font-sans font-medium uppercase tracking-[0.25em] text-gold">{t("subtitle")}</p>

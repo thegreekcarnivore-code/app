@@ -246,11 +246,11 @@ const Home = () => {
   };
 
   return (
-    <div className="px-4 pb-20 pt-10 md:px-5 md:pt-12 space-y-4 md:space-y-5">
+    <div className="px-4 pb-20 pt-6 md:px-5 md:pt-8 space-y-3 md:space-y-4">
       <motion.section
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 md:p-5 shadow-sm"
+        className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-3.5 md:p-4 shadow-sm"
       >
         <div className="space-y-4">
           <div className="grid gap-3 lg:grid-cols-[0.9fr,1.1fr] lg:items-start">
@@ -262,11 +262,6 @@ const Home = () => {
                 {isGreek ? `Γεια σου ${vocativeName || firstName}` : `Hello, ${firstName}`}!
               </h1>
               <p className="font-sans text-sm text-muted-foreground capitalize">{dateStr}</p>
-              <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
-                {isGreek
-                  ? "Ξεκίνα από τις σημερινές σου προτεραιότητες, κράτα καθαρή εικόνα του προγράμματος και δες την τελευταία καθοδήγηση χωρίς να ψάχνεις μέσα στην εφαρμογή."
-                  : "Start from today's priorities, keep the program state clear, and see the latest guidance without hunting through the app."}
-              </p>
             </div>
 
             <div className="rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm">
@@ -304,8 +299,8 @@ const Home = () => {
                     ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμο θα είναι το επόμενο review.`
                     : `You are in week ${currentWeek} of ${totalWeeks}. The consistency of this week will shape how useful the next review becomes.`
                   : isGreek
-                    ? "Το πρόγραμμα, οι καθημερινές ενέργειες και οι μετρήσεις σου συγκεντρώνονται εδώ."
-                    : "Your program, daily actions, and progress tracking come together here."}
+                    ? "Δεν έχεις ακόμα ενεργό πρόγραμμα."
+                    : "No active program yet."}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {currentWeek && totalWeeks && (
@@ -327,26 +322,28 @@ const Home = () => {
               </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 h-fit">
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
-                {isGreek ? "Γρήγορες κινήσεις" : "Quick actions"}
-              </p>
-              <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                {quickActions.map(({ key, icon: Icon, label, hint, onClick }) => (
-                  <button
-                    key={key}
-                    onClick={onClick}
-                    className="rounded-2xl border border-border/70 bg-background/80 p-3.5 text-left transition-all hover:border-gold/40 hover:shadow-sm"
-                  >
-                    <div className="mb-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <p className="font-sans text-sm font-semibold text-foreground">{label}</p>
-                    <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">{hint}</p>
-                  </button>
-                ))}
+            {programSnapshot && (
+              <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 h-fit">
+                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+                  {isGreek ? "Γρήγορες κινήσεις" : "Quick actions"}
+                </p>
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+                  {quickActions.map(({ key, icon: Icon, label, hint, onClick }) => (
+                    <button
+                      key={key}
+                      onClick={onClick}
+                      className="rounded-2xl border border-border/70 bg-background/80 p-3.5 text-left transition-all hover:border-gold/40 hover:shadow-sm"
+                    >
+                      <div className="mb-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <p className="font-sans text-sm font-semibold text-foreground">{label}</p>
+                      <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">{hint}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </motion.section>
@@ -365,21 +362,23 @@ const Home = () => {
               <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
                 {isGreek ? "Τελευταία καθοδήγηση" : "Latest coach guidance"}
               </p>
-              <h2 className="font-serif text-xl font-semibold text-foreground">
-                {latestCoachGuidance
-                  ? (isGreek ? "Τι κρατάμε τώρα" : "What to keep in focus")
-                  : (isGreek ? "Η καθοδήγησή σου θα εμφανιστεί εδώ" : "Your coach guidance will appear here")}
-              </h2>
-              <p className="font-sans text-sm leading-relaxed text-muted-foreground">
-                {latestCoachGuidance
-                  ? latestCoachGuidance
-                  : isGreek
-                    ? "Μόλις φτάσει νέο μήνυμα ή εβδομαδιαίο check-in, θα εμφανιστεί εδώ πρώτο για να μην το ψάχνεις μέσα στην εφαρμογή."
-                    : "As soon as a new coach message or weekly review arrives, it will appear here first so you do not have to search for it."}
-              </p>
-              {coachGuidanceDate && (
-                <p className="font-sans text-xs text-muted-foreground">
-                  {isGreek ? "Τελευταία ενημέρωση:" : "Last update:"} {format(new Date(coachGuidanceDate), "d MMM yyyy", { locale: isGreek ? el : enUS })}
+              {latestCoachGuidance ? (
+                <>
+                  <h2 className="font-serif text-xl font-semibold text-foreground">
+                    {isGreek ? "Τι κρατάμε τώρα" : "What to keep in focus"}
+                  </h2>
+                  <p className="font-sans text-sm leading-relaxed text-muted-foreground">{latestCoachGuidance}</p>
+                  {coachGuidanceDate && (
+                    <p className="font-sans text-xs text-muted-foreground">
+                      {isGreek ? "Τελευταία ενημέρωση:" : "Last update:"} {format(new Date(coachGuidanceDate), "d MMM yyyy", { locale: isGreek ? el : enUS })}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="font-sans text-sm text-muted-foreground">
+                  {isGreek
+                    ? "Η καθοδήγηση του coach θα εμφανιστεί εδώ μετά το πρώτο σου check-in."
+                    : "Your coach will leave guidance here after your first check-in."}
                 </p>
               )}
             </div>

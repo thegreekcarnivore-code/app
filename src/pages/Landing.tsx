@@ -63,8 +63,8 @@ const Landing = () => {
         className="relative z-10 grid w-full max-w-5xl gap-6 lg:grid-cols-[1.15fr,0.85fr]"
       >
         <div className="rounded-[2rem] border border-border/60 bg-background/75 p-7 shadow-2xl shadow-black/5 backdrop-blur">
-          <div className="space-y-4">
-            <img src={logo} alt="The Greek Carnivore" className="h-24 w-auto object-contain" />
+          <div className="space-y-3">
+            <img src={logo} alt="The Greek Carnivore" className="h-16 w-auto object-contain" />
             <div className="space-y-3">
               <p className="text-[11px] font-sans uppercase tracking-[0.35em] text-gold font-semibold">
                 {isGreek ? "Coaching App" : "Coaching App"}
@@ -82,7 +82,7 @@ const Landing = () => {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
             {highlights.map(({ icon: Icon, en, el }) => (
               <div key={en} className="rounded-2xl border border-border/70 bg-card/80 p-4 text-left">
                 <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
@@ -97,7 +97,7 @@ const Landing = () => {
         </div>
 
         <div className="rounded-[2rem] border border-border/60 bg-background/80 p-6 shadow-2xl shadow-black/5 backdrop-blur">
-          <div className="space-y-6 text-center">
+          <div className="space-y-4 text-center">
             <div className="space-y-2">
               <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-sans font-semibold uppercase tracking-[0.24em] text-gold">
                 <ShieldCheck className="h-3.5 w-3.5" />
