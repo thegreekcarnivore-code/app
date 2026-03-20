@@ -233,7 +233,7 @@ RULES:
 - 3 short lines max.
 - Mention the client's first name.
 - Mention one real focus point from the check-in.
-- Say the full review is ready inside the app.
+- Say the full weekly analysis (ανάλυση) is ready inside the app.
 - No markdown, no emojis, no hype, no filler.`;
 }
 

@@ -102,12 +102,12 @@ function buildGenericMessageEmail(firstName: string, messageContent: string, lan
 
 function buildWeeklyCheckInEmail(firstName: string, summary: string, checkInId: string, lang: string): string {
   const isEl = lang === "el";
-  const heading = isEl ? "Το εβδομαδιαίο check-in σου είναι έτοιμο" : "Your weekly check-in is ready";
+  const heading = isEl ? "Η εβδομαδιαία ανάλυσή σου είναι έτοιμη" : "Your weekly check-in is ready";
   const greeting = isEl ? `Καλησπέρα <strong>${firstName}</strong>,` : `Hi <strong>${firstName}</strong>,`;
   const body = isEl
-    ? "Η 7ήμερη ανάλυσή σου είναι έτοιμη μέσα στην εφαρμογή. Άνοιξέ την για να δεις την ουσία της εβδομάδας και το πού πρέπει να εστιάσεις τώρα."
+    ? "Η εβδομαδιαία ανάλυσή σου είναι έτοιμη μέσα στην εφαρμογή. Άνοιξέ την για να δεις την ουσία της εβδομάδας και πού να εστιάσεις τώρα."
     : "Your 7-day analysis is ready inside the app. Open it to see the real story of your week and where to focus next.";
-  const ctaText = isEl ? "Άνοιξε το εβδομαδιαίο check-in" : "Open weekly check-in";
+  const ctaText = isEl ? "Άνοιξε την εβδομαδιαία ανάλυση" : "Open weekly check-in";
   const summaryLabel = isEl ? "Σύντομη εικόνα" : "Quick summary";
 
   return `<!DOCTYPE html>
@@ -338,7 +338,7 @@ Deno.serve(async (req) => {
             if (insertCheckInError) throw insertCheckInError;
 
             const notificationTitle = clientLang === "el"
-              ? "Το 7ήμερο check-in σου είναι έτοιμο"
+              ? "Η εβδομαδιαία ανάλυσή σου είναι έτοιμη"
               : "Your 7-day check-in is ready";
 
             await supabase.from("client_notifications").insert({
@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
                 clientLang,
               );
               const emailSubject = clientLang === "el"
-                ? "Το εβδομαδιαίο check-in σου είναι έτοιμο"
+                ? "Η εβδομαδιαία ανάλυσή σου είναι έτοιμη"
                 : "Your weekly check-in is ready";
 
               const emailRes = await fetch("https://api.resend.com/emails", {
