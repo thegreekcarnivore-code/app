@@ -286,7 +286,7 @@ const Home = () => {
           <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
             {currentWeek && totalWeeks
               ? isGreek
-                ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμη θα είναι η επόμενη ανασκόπηση.`
+                ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμη θα είναι η επόμενη αξιολόγηση.`
                 : `You are in week ${currentWeek} of ${totalWeeks}. The consistency of this week will shape how useful the next review becomes.`
               : isGreek
                 ? "Δεν έχεις ακόμα ενεργό πρόγραμμα."
@@ -380,7 +380,7 @@ const Home = () => {
             </p>
             <h2 className="font-serif text-xl font-semibold text-foreground">
               {nextCheckInLabel
-                ? (isGreek ? "Κράτα έτοιμη την εβδομαδιαία σου ανασκόπηση" : "Keep your next weekly review ready")
+                ? (isGreek ? "Κράτα έτοιμη την εβδομαδιαία σου αξιολόγηση" : "Keep your next weekly review ready")
                 : (isGreek ? "Μην αφήσεις κενά στα δεδομένα σου" : "Do not let your data go cold")}
             </h2>
             <p className="font-sans text-sm leading-relaxed text-muted-foreground">
@@ -389,7 +389,7 @@ const Home = () => {
                   ? `Το επόμενο check-in αναμένεται ${nextCheckInLabel}. Βάλε μετρήσεις, φωτογραφίες και καταγραφές φαγητού πριν από τότε για πιο ουσιαστικά αποτελέσματα.`
                   : `Your next check-in is expected ${nextCheckInLabel}. Add measurements, photos, and food logs before then for stronger feedback.`
                 : isGreek
-                  ? "Άνοιξε τις μετρήσεις και κράτα σώμα, φαγητό και φωτογραφίες ενημερωμένα για να έχει νόημα η ανασκόπηση coaching."
+                  ? "Άνοιξε τις μετρήσεις και κράτα σώμα, φαγητό και φωτογραφίες ενημερωμένα για να έχει νόημα η εβδομαδιαία αξιολόγηση."
                   : "Open measurements and keep body, food, and photos updated so your coaching review stays meaningful."}
             </p>
             <button

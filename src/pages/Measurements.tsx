@@ -636,7 +636,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
                       ? "Το εβδομαδιαίο check-in σου είναι έτοιμο"
                       : "Your weekly check-in is ready"
                     : isGreek
-                      ? "Προετοίμασε το επόμενο εβδομαδιαίο review"
+                      ? "Προετοίμασε την επόμενη εβδομαδιαία αξιολόγηση"
                       : "Prepare your next weekly review"}
                 </h2>
                 <p className="max-w-3xl text-sm font-sans leading-relaxed text-muted-foreground">
@@ -648,7 +648,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
                     ? latestWeeklyCheckIn.summary
                     : nextCheckInLabel
                       ? isGreek
-                        ? `Μέχρι ${nextCheckInLabel} χρειάζεται να συμπληρώσεις σώμα, φαγητό και φωτογραφίες ώστε το weekly review να βγει ολοκληρωμένο και χρήσιμο.`
+                        ? `Μέχρι ${nextCheckInLabel} χρειάζεται να συμπληρώσεις σώμα, φαγητό και φωτογραφίες ώστε η εβδομαδιαία αξιολόγηση να βγει ολοκληρωμένη και χρήσιμη.`
                         : `Before ${nextCheckInLabel}, make sure body data, food logs, and progress photos are up to date so the weekly review is accurate and useful.`
                       : isGreek
                         ? "Η εβδομαδιαία ροή δεν έχει ενεργοποιηθεί ακόμη. Μόλις οριστεί η πρώτη προθεσμία, εδώ θα δεις τι πρέπει να συμπληρώσεις."
@@ -708,7 +708,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
                 ) : nextCheckInLabel ? (
                   <div className="max-w-xs rounded-2xl border border-border/70 bg-background/80 px-3 py-3 text-xs font-sans text-muted-foreground">
                     <p className="font-semibold text-foreground">
-                      {isGreek ? "Για να εμφανιστεί το review:" : "To unlock the review:"}
+                      {isGreek ? "Για να εμφανιστεί η αξιολόγηση:" : "To unlock the review:"}
                     </p>
                     <div className="mt-2 space-y-2">
                       {weeklyPrepChecklist.map((item) => (
