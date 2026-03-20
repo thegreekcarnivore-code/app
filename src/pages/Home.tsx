@@ -275,7 +275,7 @@ const Home = () => {
         </div>
       </motion.section>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="grid gap-3 lg:grid-cols-[1.05fr,0.95fr] lg:items-start">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="flex flex-col gap-3">
         <div className="rounded-[1.75rem] border border-gold/20 bg-background/85 p-4 h-fit">
           <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
             {isGreek ? "Τρέχουσα φάση" : "Current phase"}
