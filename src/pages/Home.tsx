@@ -272,69 +272,69 @@ const Home = () => {
               onOpenPhotos={() => navigate("/measurements?tab=photos")}
             />
           </div>
+        </div>
+      </motion.section>
 
-          <div className="grid gap-3 lg:grid-cols-[1.05fr,0.95fr] lg:items-start">
-            <div className="rounded-[1.75rem] border border-gold/20 bg-background/85 p-4 h-fit">
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
-                {isGreek ? "Τρέχουσα φάση" : "Current phase"}
-              </p>
-              <h2 className="mt-2 font-serif text-2xl font-semibold text-foreground">
-                {programSnapshot?.program_template?.name || (isGreek ? "Το πρόγραμμά σου" : "Your coaching plan")}
-              </h2>
-              <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
-                {currentWeek && totalWeeks
-                  ? isGreek
-                    ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμο θα είναι το επόμενο review.`
-                    : `You are in week ${currentWeek} of ${totalWeeks}. The consistency of this week will shape how useful the next review becomes.`
-                  : isGreek
-                    ? "Δεν έχεις ακόμα ενεργό πρόγραμμα."
-                    : "No active program yet."}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {currentWeek && totalWeeks && (
-                  <span className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
-                    {isGreek ? `Εβδομάδα ${currentWeek}/${totalWeeks}` : `Week ${currentWeek}/${totalWeeks}`}
-                  </span>
-                )}
-                {programEndDate && (
-                  <span className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
-                    {isGreek ? `Έως ${format(programEndDate, "d MMM", { locale: el })}` : `Through ${format(programEndDate, "d MMM", { locale: enUS })}`}
-                  </span>
-                )}
-                {nextCheckInLabel && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
-                    <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                    {nextCheckInLabel}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {programSnapshot && (
-              <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 h-fit">
-                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
-                  {isGreek ? "Γρήγορες κινήσεις" : "Quick actions"}
-                </p>
-                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                  {quickActions.map(({ key, icon: Icon, label, hint, onClick }) => (
-                    <button
-                      key={key}
-                      onClick={onClick}
-                      className="rounded-2xl border border-border/70 bg-background/80 p-3.5 text-left transition-all hover:border-gold/40 hover:shadow-sm"
-                    >
-                      <div className="mb-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <p className="font-sans text-sm font-semibold text-foreground">{label}</p>
-                      <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">{hint}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="grid gap-3 lg:grid-cols-[1.05fr,0.95fr] lg:items-start">
+        <div className="rounded-[1.75rem] border border-gold/20 bg-background/85 p-4 h-fit">
+          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+            {isGreek ? "Τρέχουσα φάση" : "Current phase"}
+          </p>
+          <h2 className="mt-2 font-serif text-2xl font-semibold text-foreground">
+            {programSnapshot?.program_template?.name || (isGreek ? "Το πρόγραμμά σου" : "Your coaching plan")}
+          </h2>
+          <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
+            {currentWeek && totalWeeks
+              ? isGreek
+                ? `Βρίσκεσαι στην εβδομάδα ${currentWeek} από ${totalWeeks}. Η συνέπεια αυτής της εβδομάδας θα καθορίσει πόσο χρήσιμο θα είναι το επόμενο review.`
+                : `You are in week ${currentWeek} of ${totalWeeks}. The consistency of this week will shape how useful the next review becomes.`
+              : isGreek
+                ? "Δεν έχεις ακόμα ενεργό πρόγραμμα."
+                : "No active program yet."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {currentWeek && totalWeeks && (
+              <span className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
+                {isGreek ? `Εβδομάδα ${currentWeek}/${totalWeeks}` : `Week ${currentWeek}/${totalWeeks}`}
+              </span>
+            )}
+            {programEndDate && (
+              <span className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
+                {isGreek ? `Έως ${format(programEndDate, "d MMM", { locale: el })}` : `Through ${format(programEndDate, "d MMM", { locale: enUS })}`}
+              </span>
+            )}
+            {nextCheckInLabel && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-sans font-medium text-foreground">
+                <CalendarDays className="h-3.5 w-3.5 text-gold" />
+                {nextCheckInLabel}
+              </span>
             )}
           </div>
         </div>
-      </motion.section>
+
+        {programSnapshot && (
+          <div className="rounded-[1.75rem] border border-border/70 bg-card/80 p-4 h-fit">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+              {isGreek ? "Γρήγορες κινήσεις" : "Quick actions"}
+            </p>
+            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+              {quickActions.map(({ key, icon: Icon, label, hint, onClick }) => (
+                <button
+                  key={key}
+                  onClick={onClick}
+                  className="rounded-2xl border border-border/70 bg-background/80 p-3.5 text-left transition-all hover:border-gold/40 hover:shadow-sm"
+                >
+                  <div className="mb-2.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <p className="font-sans text-sm font-semibold text-foreground">{label}</p>
+                  <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">{hint}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
         <ProgramProgressBar />
