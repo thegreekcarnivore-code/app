@@ -17,10 +17,10 @@ const PendingApproval = () => {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center space-y-6">
-        <img src={logo} alt="The Greek Carnivore" className="mx-auto h-20 w-auto object-contain" />
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center space-y-4">
+        <img src={logo} alt="The Greek Carnivore" className="mx-auto h-16 w-auto object-contain" />
         <div className="space-y-2">
-          <Clock className="h-10 w-10 text-gold mx-auto" />
+          <Clock className="h-8 w-8 text-gold mx-auto" />
           <h1 className="font-serif text-xl font-semibold text-foreground">
             {lang === "el" ? "Αναμονή Έγκρισης" : "Pending Approval"}
           </h1>

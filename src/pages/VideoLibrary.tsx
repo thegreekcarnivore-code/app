@@ -513,7 +513,7 @@ const VideoLibrary = () => {
           <div className="absolute -top-16 -right-16 w-48 h-48 bg-gold/8 rounded-full blur-3xl" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
 
-          <div className="relative p-5">
+          <div className="relative p-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1 flex-1">
                 <div className="flex items-center gap-2">
@@ -546,19 +546,19 @@ const VideoLibrary = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="mt-5 flex items-center gap-5"
+                className="mt-4 flex items-center gap-3"
               >
-                <ProgressRing progress={overallProgress} size={76} strokeWidth={5} />
+                <ProgressRing progress={overallProgress} size={64} strokeWidth={5} />
                 <div className="flex-1 grid grid-cols-3 gap-2">
-                  <div className="text-center rounded-xl bg-muted/40 py-2.5 px-1">
+                  <div className="text-center rounded-xl bg-muted/40 py-1.5 px-1">
                     <p className="font-sans text-lg font-bold text-foreground">{totalCompleted}</p>
                     <p className="font-sans text-[9px] text-muted-foreground leading-tight">{isGreek ? "Βίντεο" : "Videos"}<br />{isGreek ? "προβλήθηκαν" : "watched"}</p>
                   </div>
-                  <div className="text-center rounded-xl bg-muted/40 py-2.5 px-1">
+                  <div className="text-center rounded-xl bg-muted/40 py-1.5 px-1">
                     <p className="font-sans text-lg font-bold text-foreground">{completedModules}</p>
                     <p className="font-sans text-[9px] text-muted-foreground leading-tight">{isGreek ? "Ενότητες" : "Modules"}<br />{isGreek ? "ολοκληρώθηκαν" : "done"}</p>
                   </div>
-                  <div className="text-center rounded-xl bg-muted/40 py-2.5 px-1">
+                  <div className="text-center rounded-xl bg-muted/40 py-1.5 px-1">
                     <p className="font-sans text-lg font-bold text-gold">{overallProgress}%</p>
                     <p className="font-sans text-[9px] text-muted-foreground leading-tight">{isGreek ? "Συνολικά" : "Overall"}<br />{isGreek ? "πρόοδος" : "progress"}</p>
                   </div>
@@ -582,7 +582,7 @@ const VideoLibrary = () => {
           >
             <div className="flex items-center gap-3 p-3">
               {/* Thumbnail */}
-              <div className="relative w-28 h-[72px] rounded-xl overflow-hidden flex-shrink-0">
+              <div className="relative w-24 h-[60px] rounded-xl overflow-hidden flex-shrink-0">
                 {continueVideo.video.thumbnail_url ? (
                   <img src={continueVideo.video.thumbnail_url} alt="" className="w-full h-full object-cover" />
                 ) : extractYoutubeId(continueVideo.video.youtube_url) ? (
@@ -661,7 +661,7 @@ const VideoLibrary = () => {
 
         {/* ── Module Cards ── */}
         {filteredModules.length === 0 ? (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-20">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-muted to-muted/50 mb-5 shadow-inner">
               <BookOpen className="h-9 w-9 text-muted-foreground/40" />
             </div>

@@ -97,9 +97,9 @@ const Discover = () => {
   }
 
   return (
-    <div className="pt-14 pb-24 px-5 space-y-6">
-      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-5 shadow-sm">
-        <div className="space-y-3">
+    <div className="pt-14 pb-24 px-5 space-y-4">
+      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] p-4 shadow-sm">
+        <div className="space-y-2">
           <p className="font-sans text-xs font-semibold uppercase tracking-[0.24em] text-gold">
             {isGreek ? "Υποστήριξη εκτός σπιτιού" : "Out-of-home support"}
           </p>
@@ -125,9 +125,9 @@ const Discover = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.05 }}
               onClick={() => setActiveTab(tab.key)}
-              className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left hover:border-gold/40 hover:shadow-md transition-all group"
+              className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left hover:border-gold/40 hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
                 <Icon className="h-6 w-6 text-gold" />
               </div>
               <div className="space-y-1">
