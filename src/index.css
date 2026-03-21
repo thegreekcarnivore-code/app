@@ -54,47 +54,47 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     /* #050505 */
-    --background: 0 0% 2%;
+    --background: 0 0% 3%;
     /* #F5F2EB */
     --foreground: 40 47% 94%;
 
-    /* #111111 */
-    --card: 0 0% 7%;
+    /* #141414 */
+    --card: 0 0% 8%;
     --card-foreground: 40 47% 94%;
 
-    --popover: 0 0% 7%;
+    --popover: 0 0% 8%;
     --popover-foreground: 40 47% 94%;
 
     /* #CFA86A */
     --primary: 38 54% 62%;
-    --primary-foreground: 0 0% 2%;
+    --primary-foreground: 0 0% 3%;
 
-    /* #2a2520 */
-    --secondary: 28 14% 14%;
-    --secondary-foreground: 40 30% 88%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 40 20% 88%;
 
-    --muted: 28 10% 11%;
+    --muted: 0 0% 10%;
     /* #B5B5B5 */
-    --muted-foreground: 0 0% 71%;
+    --muted-foreground: 0 0% 68%;
 
-    --accent: 28 14% 14%;
+    --accent: 0 0% 12%;
     --accent-foreground: 40 47% 94%;
 
     --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    /* borders: slightly above card */
-    --border: 28 12% 18%;
-    --input: 28 10% 11%;
+    --border: 0 0% 18%;
+    --input: 0 0% 10%;
     --ring: 38 54% 62%;
 
     /* #CFA86A */
     --gold: 38 54% 62%;
-    --gold-foreground: 0 0% 2%;
-    --charcoal: 0 0% 2%;
-    --charcoal-light: 28 14% 14%;
-    --beige: 28 14% 14%;
+    --gold-foreground: 0 0% 3%;
+    --charcoal: 0 0% 3%;
+    --charcoal-light: 0 0% 10%;
+    --beige: 0 0% 10%;
     --beige-dark: 0 0% 7%;
   }
 }
@@ -112,6 +112,22 @@
     background: radial-gradient(circle at top left, #2a2520 0%, #111111 45%, #050505 100%);
     color: #E0E0E0;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Dark mode — force dark on all native/browser elements */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: hsl(0 0% 10%) !important;
+    color: hsl(40 47% 94%) !important;
+    border-color: hsl(0 0% 18%) !important;
+  }
+
+  /* Dark mode — dialogs, popovers, sheets fully opaque dark */
+  .dark [role="dialog"],
+  .dark [role="alertdialog"],
+  .dark [data-radix-popper-content-wrapper] > * {
+    background-color: hsl(0 0% 8%) !important;
   }
 
   /* Dark mode — bubble behind headings */
@@ -172,9 +188,18 @@
   .glass {
     @apply bg-background/80 backdrop-blur-xl border-border/50;
   }
+  .dark .glass {
+    background-color: rgba(8, 8, 8, 0.96);
+    backdrop-filter: blur(20px);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
 
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl;
+  }
+  .dark .glass-card {
+    background-color: rgba(14, 14, 14, 0.97);
+    backdrop-filter: blur(20px);
   }
 
   /* Card hover lift */
