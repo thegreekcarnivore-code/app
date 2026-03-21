@@ -132,10 +132,10 @@
 
   /* Dark mode — ensure headings and paragraphs always stack vertically */
   .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-    display: block;
+    display: block !important;
   }
   .dark p {
-    display: block;
+    display: block !important;
   }
 
   /* Card depth in dark mode */
