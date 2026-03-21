@@ -130,35 +130,6 @@
     background-color: hsl(0 0% 8%) !important;
   }
 
-  /* Dark mode — bubble behind headings */
-  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-    display: inline-block;
-    background: rgba(0, 0, 0, 0.55);
-    padding: 0.08em 0.55em;
-    border-radius: 0.45em;
-    line-height: 1.65;
-  }
-
-  /* Dark mode — bubble behind section labels (small uppercase text) */
-  .dark p.uppercase,
-  .dark span.uppercase {
-    display: inline-block;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.15em 0.6em;
-    border-radius: 0.4em;
-  }
-
-  /* Dark mode — subtle bubble behind description text */
-  .dark p.text-muted-foreground {
-    display: inline;
-    background: rgba(0, 0, 0, 0.45);
-    padding: 0.1em 0.4em;
-    border-radius: 0.35em;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    line-height: 1.9;
-  }
-
   /* Card depth in dark mode */
   .dark .shadow-sm {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
