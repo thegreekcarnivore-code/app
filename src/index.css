@@ -130,6 +130,14 @@
     background-color: hsl(0 0% 8%) !important;
   }
 
+  /* Dark mode — ensure headings and paragraphs always stack vertically */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    display: block;
+  }
+  .dark p {
+    display: block;
+  }
+
   /* Card depth in dark mode */
   .dark .shadow-sm {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
