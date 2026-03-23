@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { Lock, Check } from "lucide-react";
+import { Lock, Check, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 const ResetPassword = () => {
@@ -12,21 +12,56 @@ const ResetPassword = () => {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState<boolean | null>(null);
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase handles the recovery token from the URL hash automatically
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        // User arrived via reset link — ready to set new password
+    let active = true;
+
+    const syncRecoveryState = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!active) return;
+      setRecoveryReady(!!session?.user);
+    };
+
+    syncRecoveryState();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session?.user)) {
+        setRecoveryReady(true);
+      }
+
+      if (event === "SIGNED_OUT" && !session?.user) {
+        setRecoveryReady(false);
       }
     });
-    return () => subscription.unsubscribe();
+
+    const fallbackTimer = window.setTimeout(() => {
+      setRecoveryReady((current) => current ?? false);
+    }, 1200);
+
+    return () => {
+      active = false;
+      window.clearTimeout(fallbackTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!recoveryReady) {
+      toast({
+        title: lang === "el" ? "Το link δεν είναι έγκυρο" : "This link is not valid",
+        description: lang === "el"
+          ? "Ζητήστε νέο email επαναφοράς και δοκιμάστε ξανά."
+          : "Request a new password reset email and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (password.length < 6) {
       toast({ title: lang === "el" ? "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες" : "Password must be at least 6 characters", variant: "destructive" });
       return;
@@ -41,8 +76,13 @@ const ResetPassword = () => {
       toast({ title: lang === "el" ? "Σφάλμα" : "Error", description: error.message, variant: "destructive" });
     } else {
       setSuccess(true);
-      toast({ title: lang === "el" ? "Ο κωδικός ενημερώθηκε!" : "Password updated!" });
-      setTimeout(() => navigate("/home"), 2000);
+      toast({
+        title: lang === "el" ? "Ο κωδικός ενημερώθηκε!" : "Password updated!",
+        description: lang === "el"
+          ? "Μπαίνεις τώρα ξανά στην πλατφόρμα."
+          : "You are being taken back into the platform now.",
+      });
+      setTimeout(() => navigate("/home", { replace: true }), 1500);
     }
     setLoading(false);
   };
@@ -70,17 +110,48 @@ const ResetPassword = () => {
               {lang === "el" ? "Ανακατεύθυνση..." : "Redirecting..."}
             </p>
           </div>
+        ) : recoveryReady === false ? (
+          <div className="space-y-4 rounded-[1.75rem] border border-border bg-card p-5 text-center shadow-sm">
+            <div className="space-y-2">
+              <h2 className="font-serif text-xl font-semibold text-foreground">
+                {lang === "el" ? "Το link επαναφοράς έχει λήξει ή δεν είναι έγκυρο" : "This reset link has expired or is not valid"}
+              </h2>
+              <p className="font-sans text-sm leading-relaxed text-muted-foreground">
+                {lang === "el"
+                  ? "Ζήτησε νέο email επαναφοράς από τη σελίδα σύνδεσης και άνοιξε μόνο το πιο πρόσφατο link."
+                  : "Request a new password reset email from the sign-in page and open only the most recent link."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/auth", { replace: true })}
+              className="inline-flex items-center gap-2 rounded-2xl border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-gold/40 hover:text-gold"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {lang === "el" ? "Πίσω στη σύνδεση" : "Back to sign in"}
+            </button>
+          </div>
         ) : (
           <form onSubmit={handleReset} className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2.5 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lang === "el" ? "Νέος κωδικός" : "New password"} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={lang === "el" ? "Νέος κωδικός" : "New password"} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                <button type="button" onClick={() => setShowPassword((current) => !current)} className="shrink-0 text-muted-foreground transition-colors hover:text-foreground">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-              <p className="text-[11px] text-muted-foreground font-sans pl-1 -mt-1">{lang === "el" ? "Τουλάχιστον 6 χαρακτήρες, π.χ. MyDiet2024!" : "Min 6 characters, e.g. MyDiet2024!"}</p>
+              <p className="text-[11px] text-muted-foreground font-sans pl-1 -mt-1">
+                {lang === "el"
+                  ? "Γράψε τον νέο σου κωδικό και επιβεβαίωσέ τον ξανά ακριβώς από κάτω."
+                  : "Write your new password once and confirm it exactly the same below."}
+              </p>
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2.5 transition-all duration-300 focus-within:border-gold/50 focus-within:shadow-gold-sm">
                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={lang === "el" ? "Επιβεβαίωση κωδικού" : "Confirm password"} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                <input type={showConfirm ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={lang === "el" ? "Επιβεβαίωση κωδικού" : "Confirm password"} required minLength={6} className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+                <button type="button" onClick={() => setShowConfirm((current) => !current)} className="shrink-0 text-muted-foreground transition-colors hover:text-foreground">
+                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
             <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-3 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">

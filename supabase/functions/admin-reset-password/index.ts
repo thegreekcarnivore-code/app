@@ -75,31 +75,31 @@ Deno.serve(async (req) => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Look up user by email in profiles table
-    const { data: profileData } = await adminClient
+    // Look up every profile row for this email because migrated users may still
+    // have duplicate same-email rows and only one of them is auth-linked.
+    const { data: profileRows, error: profileLookupError } = await adminClient
       .from("profiles")
-      .select("id")
-      .eq("email", trimmedEmail)
-      .maybeSingle();
+      .select("id, language, approved, created_at, last_login_at")
+      .eq("email", trimmedEmail);
 
-    if (!profileData) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (profileLookupError) {
+      console.error("Profile lookup error:", profileLookupError);
     }
 
-    const { data: { user: targetUser }, error: getUserError } = await adminClient.auth.admin.getUserById(profileData.id);
-    if (getUserError || !targetUser) {
-      console.error("getUserById error:", getUserError);
-      return new Response(JSON.stringify({ error: "User not found in auth" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let targetUser: any = null;
+    let targetProfile: any = null;
+
+    for (const profileRow of profileRows || []) {
+      const { data: authData, error: getUserError } = await adminClient.auth.admin.getUserById(profileRow.id);
+      if (!getUserError && authData?.user) {
+        targetUser = authData.user;
+        targetProfile = profileRow;
+        break;
+      }
     }
 
-    // Confirm email if not yet verified
-    if (!targetUser.email_confirmed_at) {
+    // If we found the auth-linked user, confirm the email before generating the link.
+    if (targetUser && !targetUser.email_confirmed_at) {
       console.log("Confirming unverified email for:", trimmedEmail);
       await adminClient.auth.admin.updateUserById(targetUser.id, {
         email_confirm: true,
@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
 
     if (linkError) {
       console.error("Generate link error:", linkError);
-      return new Response(JSON.stringify({ error: "Failed to generate reset link" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: "User not found or reset link could not be generated" }), {
+        status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -132,7 +132,11 @@ Deno.serve(async (req) => {
     }
 
     // Resolve language preference
-    const language = targetUser.user_metadata?.language || "en";
+    const language =
+      targetUser?.user_metadata?.language ||
+      targetProfile?.language ||
+      profileRows?.[0]?.language ||
+      "el";
 
     // Render branded recovery email
     const html = await renderAsync(
@@ -158,7 +162,7 @@ Deno.serve(async (req) => {
         subject,
         html,
         headers: {
-          "X-Entity-Ref-ID": `admin-reset-${targetUser.id}-${Date.now()}`,
+          "X-Entity-Ref-ID": `admin-reset-${targetUser?.id || trimmedEmail}-${Date.now()}`,
         },
       }),
     });

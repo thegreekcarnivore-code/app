@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil } from "lucide-react";
+import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil, KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
@@ -165,6 +165,7 @@ const Admin = () => {
   const [invitationMap, setInvitationMap] = useState<Map<string, InvitationInfo>>(new Map());
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [reconnectingEmail, setReconnectingEmail] = useState<string | null>(null);
+  const [resettingPasswordEmail, setResettingPasswordEmail] = useState<string | null>(null);
   const [duplicateCandidates, setDuplicateCandidates] = useState<DuplicateProfileCandidate[]>([]);
   const [mergeCandidate, setMergeCandidate] = useState<DuplicateProfileCandidate | null>(null);
   const [mergingDuplicateEmail, setMergingDuplicateEmail] = useState<string | null>(null);
@@ -449,6 +450,28 @@ const Admin = () => {
           : `Reminder sent to ${email}`,
       });
     }
+  };
+
+  const handleSendPasswordReset = async (email: string) => {
+    setResettingPasswordEmail(email);
+    const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+      body: { email: email.toLowerCase() },
+    });
+    setResettingPasswordEmail(null);
+
+    if (error || data?.error) {
+      toast({
+        title: "Password reset failed",
+        description: error?.message || data?.error || "Could not send the password reset email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Password reset sent",
+      description: `A reset link was sent to ${email}.`,
+    });
   };
 
   const handleMergeDuplicate = async () => {
@@ -1110,6 +1133,14 @@ const Admin = () => {
                         <IconButtonWithTooltip tooltip="Resend Invitation" onClick={() => handleResendInvite(u.email!)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
                           <Send className="h-4 w-4" />
                           <span className="text-[10px] font-medium">{resendingEmail === u.email ? "Sending..." : "Resend Invite"}</span>
+                        </IconButtonWithTooltip>
+                      )}
+                      {u.email && (
+                        <IconButtonWithTooltip tooltip="Send Password Reset" onClick={() => handleSendPasswordReset(u.email!)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-primary hover:bg-primary/20 transition-colors">
+                          <KeyRound className="h-4 w-4" />
+                          <span className="text-[10px] font-medium">
+                            {resettingPasswordEmail === u.email ? "Sending..." : "Reset Password"}
+                          </span>
                         </IconButtonWithTooltip>
                       )}
                       {u.email && (

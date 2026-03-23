@@ -225,6 +225,16 @@ const Auth = () => {
                 <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required className="flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
               </div>
+              <div className="rounded-[1.5rem] border border-border/60 bg-background/70 px-4 py-3">
+                <p className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+                  {lang === "el" ? "Πώς λειτουργεί" : "How it works"}
+                </p>
+                <p className="mt-1 font-sans text-xs leading-relaxed text-muted-foreground">
+                  {lang === "el"
+                    ? "Θα λάβεις ασφαλές link στο email σου. Από εκεί θα ορίσεις τον νέο κωδικό δύο φορές για επιβεβαίωση και θα μπεις ξανά στην πλατφόρμα."
+                    : "You will receive a secure link by email. From there you will set your new password twice for confirmation and get back into the platform."}
+                </p>
+              </div>
               <button type="submit" disabled={loading} className="shimmer-gold flex w-full items-center justify-center rounded-2xl bg-gold py-4 font-sans text-sm font-semibold text-gold-foreground transition-all duration-200 hover:opacity-90 disabled:opacity-50 shadow-gold-md">
                 {loading ? t("pleaseWait") : (lang === "el" ? "Αποστολή συνδέσμου" : "Send reset link")}
               </button>
