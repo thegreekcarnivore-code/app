@@ -2121,6 +2121,29 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      list_duplicate_profile_candidates: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_approved: boolean | null
+          auth_created_at: string | null
+          auth_display_name: string | null
+          auth_last_login_at: string | null
+          auth_profile_id: string | null
+          can_merge: boolean
+          email: string
+          legacy_approved: boolean | null
+          legacy_created_at: string | null
+          legacy_display_name: string | null
+          legacy_last_login_at: string | null
+          legacy_profile_id: string | null
+          review_reason: string | null
+          source_groups: number
+          source_measurements: number
+          source_messages: number
+          source_notes: number
+          source_programs: number
+        }[]
+      }
       log_api_usage: {
         Args: {
           _call_count?: number
@@ -2131,6 +2154,10 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      merge_duplicate_profiles_admin: {
+        Args: { _source_user_id: string; _target_user_id: string }
+        Returns: Json
       }
       use_invite_token: {
         Args: { _token: string; _user_id: string }

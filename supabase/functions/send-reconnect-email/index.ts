@@ -55,6 +55,11 @@ function buildReconnectHtml(firstName: string, language: string, loginUrl: strin
 </html>`;
 }
 
+function toFeatureAccess(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, boolean>;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -99,8 +104,9 @@ Deno.serve(async (req) => {
     }
 
     const { email, language } = await req.json();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return new Response(JSON.stringify({ error: "Email is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -115,20 +121,264 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Look up display name for personalization
     const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: profile } = await serviceClient
+    const { data: matchingProfiles, error: profileLookupError } = await serviceClient
       .from("profiles")
-      .select("display_name")
-      .eq("email", email)
+      .select("id, display_name, approved, feature_access, height_cm, sex, date_of_birth, language, timezone, vocative_name_el, avatar_url, onboarding_tour_completed, stripe_customer_id")
+      .eq("email", normalizedEmail)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (profileLookupError) {
+      return new Response(JSON.stringify({ error: profileLookupError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const legacyProfile = matchingProfiles?.[0] ?? null;
+
+    const { data: latestInvitation } = await serviceClient
+      .from("email_invitations")
+      .select("id, status, feature_access, program_template_id, start_date, measurement_day, group_id, created_by")
+      .eq("email", normalizedEmail)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    const firstName = profile?.display_name?.split(" ")[0] || "";
+    const { data: authUsersPage, error: authUsersError } = await serviceClient.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (authUsersError) {
+      return new Response(JSON.stringify({ error: authUsersError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let authUser = authUsersPage.users.find((candidate) => candidate.email?.toLowerCase() === normalizedEmail) ?? null;
+
+    if (!authUser) {
+      const { data: createdUserData, error: createUserError } = await serviceClient.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: true,
+        user_metadata: { language: language || legacyProfile?.language || "el" },
+      });
+
+      if (createUserError || !createdUserData.user) {
+        return new Response(JSON.stringify({ error: createUserError?.message || "Failed to create auth user" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      authUser = createdUserData.user;
+    }
+
+    const targetUserId = authUser.id;
+
+    const { data: authProfile, error: authProfileError } = await serviceClient
+      .from("profiles")
+      .select("id, display_name, approved, feature_access, height_cm, sex, date_of_birth, language, timezone, vocative_name_el, avatar_url, onboarding_tour_completed, stripe_customer_id")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (authProfileError) {
+      return new Response(JSON.stringify({ error: authProfileError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const baseProfile = authProfile ?? legacyProfile;
+    const profileFeatureAccess = toFeatureAccess(authProfile?.feature_access) || toFeatureAccess(legacyProfile?.feature_access);
+    const invitationFeatureAccess = toFeatureAccess(latestInvitation?.feature_access);
+    const resolvedFeatureAccess = profileFeatureAccess || invitationFeatureAccess;
+    const profilePatch: Record<string, unknown> = {};
+
+    if (!(authProfile?.approved ?? false)) {
+      profilePatch.approved = true;
+    }
+
+    if ((!profileFeatureAccess || Object.keys(profileFeatureAccess).length === 0) && resolvedFeatureAccess) {
+      profilePatch.feature_access = resolvedFeatureAccess;
+    }
+
+    if (authProfile) {
+      if (Object.keys(profilePatch).length > 0) {
+        const { error: profileUpdateError } = await serviceClient
+          .from("profiles")
+          .update(profilePatch)
+          .eq("id", targetUserId);
+
+        if (profileUpdateError) {
+          return new Response(JSON.stringify({ error: profileUpdateError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    } else {
+      const { error: profileUpdateError } = await serviceClient
+        .from("profiles")
+        .insert({
+          id: targetUserId,
+          email: normalizedEmail,
+          display_name: baseProfile?.display_name ?? null,
+          height_cm: baseProfile?.height_cm ?? null,
+          sex: baseProfile?.sex ?? null,
+          date_of_birth: baseProfile?.date_of_birth ?? null,
+          language: baseProfile?.language || language || "el",
+          timezone: baseProfile?.timezone ?? null,
+          vocative_name_el: baseProfile?.vocative_name_el ?? null,
+          avatar_url: baseProfile?.avatar_url ?? null,
+          onboarding_tour_completed: baseProfile?.onboarding_tour_completed ?? false,
+          stripe_customer_id: baseProfile?.stripe_customer_id ?? null,
+          approved: true,
+          feature_access: resolvedFeatureAccess ?? undefined,
+        });
+
+      if (profileUpdateError) {
+        return new Response(JSON.stringify({ error: profileUpdateError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (legacyProfile?.id && legacyProfile.id !== targetUserId) {
+      const { data: legacyEnrollments } = await serviceClient
+        .from("client_program_enrollments")
+        .select("program_template_id, start_date, weekly_day, status, feature_access_override, duration_weeks_override, created_by")
+        .eq("user_id", legacyProfile.id);
+
+      for (const enrollment of legacyEnrollments || []) {
+        const { data: existingEnrollment } = await serviceClient
+          .from("client_program_enrollments")
+          .select("id")
+          .eq("user_id", targetUserId)
+          .eq("program_template_id", enrollment.program_template_id)
+          .maybeSingle();
+
+        if (!existingEnrollment) {
+          const { error: copyEnrollmentError } = await serviceClient
+            .from("client_program_enrollments")
+            .insert({
+              user_id: targetUserId,
+              program_template_id: enrollment.program_template_id,
+              start_date: enrollment.start_date,
+              weekly_day: enrollment.weekly_day,
+              status: enrollment.status,
+              feature_access_override: enrollment.feature_access_override,
+              duration_weeks_override: enrollment.duration_weeks_override,
+              created_by: enrollment.created_by,
+            });
+
+          if (copyEnrollmentError) {
+            console.warn("Reconnect legacy enrollment copy skipped:", copyEnrollmentError.message);
+          }
+        }
+      }
+
+      const { data: legacyMemberships } = await serviceClient
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", legacyProfile.id);
+
+      for (const membership of legacyMemberships || []) {
+        const { data: existingMembership } = await serviceClient
+          .from("group_members")
+          .select("id")
+          .eq("group_id", membership.group_id)
+          .eq("user_id", targetUserId)
+          .maybeSingle();
+
+        if (!existingMembership) {
+          const { error: copyMembershipError } = await serviceClient
+            .from("group_members")
+            .insert({
+              group_id: membership.group_id,
+              user_id: targetUserId,
+            });
+
+          if (copyMembershipError) {
+            console.warn("Reconnect legacy group membership copy skipped:", copyMembershipError.message);
+          }
+        }
+      }
+    }
+
+    if (latestInvitation?.program_template_id) {
+      const { data: existingEnrollment } = await serviceClient
+        .from("client_program_enrollments")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .eq("program_template_id", latestInvitation.program_template_id)
+        .maybeSingle();
+
+      if (!existingEnrollment) {
+        const { error: enrollmentError } = await serviceClient
+          .from("client_program_enrollments")
+          .insert({
+            user_id: targetUserId,
+            program_template_id: latestInvitation.program_template_id,
+            feature_access_override: invitationFeatureAccess,
+            start_date: latestInvitation.start_date || new Date().toISOString().slice(0, 10),
+            weekly_day: latestInvitation.measurement_day ?? 1,
+            created_by: latestInvitation.created_by,
+          });
+
+        if (enrollmentError) {
+          console.warn("Reconnect enrollment restore skipped:", enrollmentError.message);
+        }
+      }
+    }
+
+    if (latestInvitation?.group_id) {
+      const { data: existingMembership } = await serviceClient
+        .from("group_members")
+        .select("id")
+        .eq("group_id", latestInvitation.group_id)
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+
+      if (!existingMembership) {
+        const { error: membershipError } = await serviceClient
+          .from("group_members")
+          .insert({
+            group_id: latestInvitation.group_id,
+            user_id: targetUserId,
+          });
+
+        if (membershipError) {
+          console.warn("Reconnect group restore skipped:", membershipError.message);
+        }
+      }
+    }
+
+    if (latestInvitation?.status === "pending") {
+      const { error: invitationUpdateError } = await serviceClient
+        .from("email_invitations")
+        .update({
+          status: "used",
+          used_at: new Date().toISOString(),
+          used_by: targetUserId,
+        })
+        .eq("id", latestInvitation.id);
+
+      if (invitationUpdateError) {
+        console.warn("Reconnect invitation status update skipped:", invitationUpdateError.message);
+      }
+    }
+
+    const firstName = (authProfile?.display_name || legacyProfile?.display_name || "")?.split(" ")[0] || "";
 
     // Generate a magic link so the client can log in with one click
     const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
       type: "magiclink",
-      email,
+      email: normalizedEmail,
       options: { redirectTo: buildAppUrl("/auth") },
     });
     const loginUrl = linkData?.properties?.action_link || buildAppUrl("/auth");
@@ -147,7 +397,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "The Greek Carnivore <noreply@thegreekcarnivore.com>",
-        to: [email],
+        to: [normalizedEmail],
         subject,
         html,
       }),
@@ -164,9 +414,13 @@ Deno.serve(async (req) => {
 
     await res.text(); // consume body
 
-    console.log("Reconnect email sent to:", email);
+    console.log("Reconnect email sent to:", normalizedEmail);
     return new Response(
-      JSON.stringify({ success: true, message: `Reconnect email sent to ${email}` }),
+      JSON.stringify({
+        success: true,
+        message: `Reconnect email sent to ${normalizedEmail}`,
+        restored_access: !(authProfile?.approved ?? false),
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {

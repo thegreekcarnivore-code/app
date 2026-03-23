@@ -12,8 +12,8 @@ const Landing = () => {
   const highlights = [
     {
       icon: Activity,
-      en: "Track body, food, and progress in one place",
-      el: "Παρακολούθησε σώμα, διατροφή και πρόοδο σε ένα μέρος",
+      en: "Track your body, meals, and progress in one place",
+      el: "Παρακολούθησε το σώμα, τη διατροφή και την πρόοδό σου σε ένα μέρος",
     },
     {
       icon: ClipboardCheck,
@@ -23,7 +23,7 @@ const Landing = () => {
     {
       icon: MessageCircle,
       en: "Keep every coach message, program update, and next step together",
-      el: "Κράτησε μαζί κάθε μήνυμα coach, ενημέρωση προγράμματος και επόμενο βήμα",
+      el: "Κράτησε μαζί κάθε μήνυμα από τον coach, κάθε ενημέρωση προγράμματος και το επόμενο βήμα σου",
     },
   ];
 
@@ -71,13 +71,13 @@ const Landing = () => {
               </p>
               <h1 className="max-w-2xl font-serif text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
                 {isGreek
-                  ? "Η πλατφόρμα coaching για συνέπεια, πρόοδο και πραγματική καθοδήγηση."
-                  : "The coaching platform built for consistency, progress, and real accountability."}
+                  ? "Η πλατφόρμα coaching που σε κρατά συνεπή, οργανωμένο και σε επαφή με την πρόοδό σου."
+                  : "The coaching platform that keeps you consistent, organized, and connected to your progress."}
               </h1>
               <p className="max-w-xl font-sans text-base leading-relaxed text-muted-foreground">
                 {isGreek
-                  ? "Όλα όσα χρειάζεται ο πελάτης σου σε ένα σημείο: μετρήσεις, check-ins, καθημερινές εργασίες, υλικό υποστήριξης και άμεση επικοινωνία."
-                  : "Everything your clients need in one place: measurements, check-ins, daily tasks, support resources, and direct coach communication."}
+                  ? "Όλα όσα χρειάζεσαι σε ένα σημείο: μετρήσεις, check-ins, καθημερινές εργασίες, υλικό υποστήριξης και άμεση επικοινωνία με τον coach σου."
+                  : "Everything you need in one place: measurements, check-ins, daily tasks, support resources, and direct communication with your coach."}
               </p>
             </div>
           </div>
@@ -108,8 +108,8 @@ const Landing = () => {
               </h2>
               <p className="font-sans text-sm leading-relaxed text-muted-foreground">
                 {isGreek
-                  ? "Οι υπάρχοντες πελάτες συνεχίζουν στο προσωπικό τους dashboard. Νέοι λογαριασμοί ενεργοποιούνται μετά από έγκριση."
-                  : "Existing clients continue into their personal dashboard. New accounts are activated after review and approval."}
+                  ? "Συνδέσου για να μπεις στο προσωπικό σου dashboard. Αν είναι η πρώτη σου φορά, η πρόσβαση ενεργοποιείται μόλις εγκριθεί ο λογαριασμός σου."
+                  : "Sign in to enter your personal dashboard. If this is your first time, access is activated as soon as your account is approved."}
               </p>
             </div>
 
@@ -133,9 +133,9 @@ const Landing = () => {
                 {isGreek ? "Τι περιλαμβάνει" : "Inside the App"}
               </p>
               <ul className="mt-3 space-y-2 font-sans text-sm text-foreground">
-                <li>{isGreek ? "Μετρήσεις σώματος, διατροφής και φωτογραφιών" : "Body, food, and progress-photo tracking"}</li>
+                <li>{isGreek ? "Μετρήσεις σώματος, διατροφής και φωτογραφιών προόδου" : "Body, meal, and progress-photo tracking"}</li>
                 <li>{isGreek ? "Καθημερινές εργασίες και εβδομαδιαία accountability" : "Daily tasks and weekly accountability"}</li>
-                <li>{isGreek ? "Άμεση επικοινωνία και εξατομικευμένη καθοδήγηση" : "Direct communication and personalized coaching support"}</li>
+                <li>{isGreek ? "Άμεση επικοινωνία και εξατομικευμένη καθοδήγηση για σένα" : "Direct communication and personalized coaching built around you"}</li>
               </ul>
             </div>
           </div>

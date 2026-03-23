@@ -58,6 +58,27 @@ interface PendingUser {
   _inviteStartDate?: string | null;
 }
 
+interface DuplicateProfileCandidate {
+  email: string;
+  auth_profile_id: string | null;
+  legacy_profile_id: string | null;
+  auth_approved: boolean | null;
+  legacy_approved: boolean | null;
+  auth_display_name: string | null;
+  legacy_display_name: string | null;
+  auth_created_at: string | null;
+  legacy_created_at: string | null;
+  auth_last_login_at: string | null;
+  legacy_last_login_at: string | null;
+  source_programs: number;
+  source_groups: number;
+  source_notes: number;
+  source_measurements: number;
+  source_messages: number;
+  can_merge: boolean;
+  review_reason: string | null;
+}
+
 interface AdminCategory {
   id: string;
   name: string;
@@ -144,10 +165,28 @@ const Admin = () => {
   const [invitationMap, setInvitationMap] = useState<Map<string, InvitationInfo>>(new Map());
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [reconnectingEmail, setReconnectingEmail] = useState<string | null>(null);
+  const [duplicateCandidates, setDuplicateCandidates] = useState<DuplicateProfileCandidate[]>([]);
+  const [mergeCandidate, setMergeCandidate] = useState<DuplicateProfileCandidate | null>(null);
+  const [mergingDuplicateEmail, setMergingDuplicateEmail] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdmin();
   }, [user]);
+
+  const refreshAdminData = async () => {
+    await Promise.all([
+      fetchUsers(),
+      fetchActivity(),
+      fetchCosts(),
+      fetchEnrollments(),
+      fetchAdminCategories(),
+      fetchAiMsgCounts(),
+      fetchPendingTasks(),
+      fetchInvitations(),
+      fetchAwaitingPayment(),
+      fetchDuplicateCandidates(),
+    ]);
+  };
 
   const checkAdmin = async () => {
     if (!user) return;
@@ -160,7 +199,7 @@ const Admin = () => {
     
     if (data) {
       setIsAdmin(true);
-      await Promise.all([fetchUsers(), fetchActivity(), fetchCosts(), fetchEnrollments(), fetchAdminCategories(), fetchAiMsgCounts(), fetchPendingTasks(), fetchInvitations(), fetchAwaitingPayment()]);
+      await refreshAdminData();
     }
     setLoading(false);
   };
@@ -359,6 +398,16 @@ const Admin = () => {
     setUsedInvitationEmails(usedEmails);
   };
 
+  const fetchDuplicateCandidates = async () => {
+    const { data, error } = await supabase.rpc("list_duplicate_profile_candidates");
+    if (error) {
+      console.error("Failed to load duplicate profile candidates:", error.message);
+      setDuplicateCandidates([]);
+      return;
+    }
+    setDuplicateCandidates(((data as any[]) || []) as DuplicateProfileCandidate[]);
+  };
+
   const handleResendInvite = async (email: string) => {
     const invInfo = invitationMap.get(email.toLowerCase());
     if (!invInfo) return;
@@ -393,8 +442,36 @@ const Admin = () => {
     if (error || data?.error) {
       toast({ title: "Error", description: error?.message || data?.error, variant: "destructive" });
     } else {
-      toast({ title: "Reconnect email sent", description: `Reminder sent to ${email}` });
+      toast({
+        title: data?.restored_access ? "Access granted & reconnect email sent" : "Reconnect email sent",
+        description: data?.restored_access
+          ? `${email} can now use the direct login link immediately.`
+          : `Reminder sent to ${email}`,
+      });
     }
+  };
+
+  const handleMergeDuplicate = async () => {
+    if (!mergeCandidate?.legacy_profile_id || !mergeCandidate.auth_profile_id) return;
+
+    setMergingDuplicateEmail(mergeCandidate.email);
+    const { error } = await supabase.rpc("merge_duplicate_profiles_admin", {
+      _source_user_id: mergeCandidate.legacy_profile_id,
+      _target_user_id: mergeCandidate.auth_profile_id,
+    });
+    setMergingDuplicateEmail(null);
+
+    if (error) {
+      toast({ title: "Merge failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Profiles merged",
+      description: `${mergeCandidate.email} now keeps the current login profile and all migrated client data under one account.`,
+    });
+    setMergeCandidate(null);
+    await refreshAdminData();
   };
 
   const approveUser = async (userId: string) => {
@@ -526,6 +603,8 @@ const Admin = () => {
     },
   ];
   const activeTabMeta = ADMIN_TABS.find((tab) => tab.key === activeTab) ?? ADMIN_TABS[0];
+  const mergeSafeCandidates = duplicateCandidates.filter((candidate) => candidate.can_merge);
+  const reviewOnlyCandidates = duplicateCandidates.filter((candidate) => !candidate.can_merge);
 
   if (loading) {
     return (
@@ -694,6 +773,11 @@ const Admin = () => {
                         {pendingApprovals} approvals waiting
                       </span>
                     )}
+                    {mergeSafeCandidates.length > 0 && (
+                      <span className="rounded-full border border-destructive/25 bg-destructive/10 px-3 py-1 text-[11px] font-sans font-medium text-destructive">
+                        {mergeSafeCandidates.length} duplicate access requests need merge
+                      </span>
+                    )}
                     {clientsWithPendingTasks > 0 && (
                       <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-sans font-medium text-gold">
                         {clientsWithPendingTasks} clients with pending tasks
@@ -759,6 +843,101 @@ const Admin = () => {
                 </button>
               </div>
             </div>
+
+            {(mergeSafeCandidates.length > 0 || reviewOnlyCandidates.length > 0) && (
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <div className="space-y-1">
+                  <p className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-gold">Duplicate access requests</p>
+                  <h3 className="font-serif text-lg font-semibold text-foreground">Merge migrated profile data into the current login profile</h3>
+                  <p className="font-sans text-sm text-muted-foreground">
+                    These clients now have two profile rows with the same email. Keep the auth-linked login profile, move all migrated client data into it, and remove the legacy duplicate.
+                  </p>
+                </div>
+
+                {mergeSafeCandidates.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    {mergeSafeCandidates.map((candidate) => (
+                      <div key={candidate.email} className="rounded-[1.5rem] border border-destructive/20 bg-destructive/5 p-4">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-destructive">Safe to merge now</p>
+                              <h4 className="font-serif text-xl font-semibold text-foreground">{candidate.email}</h4>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Current login profile</p>
+                                <p className="mt-2 font-sans text-xs text-foreground">{candidate.auth_display_name || "No display name yet"}</p>
+                                <p className="mt-1 font-mono text-[10px] text-muted-foreground">{candidate.auth_profile_id}</p>
+                                <p className="mt-1 font-sans text-[11px] text-muted-foreground">
+                                  Created {candidate.auth_created_at ? new Date(candidate.auth_created_at).toLocaleString() : "Unknown"}
+                                </p>
+                                <p className="mt-1 font-sans text-[11px] text-muted-foreground">
+                                  Last login {candidate.auth_last_login_at ? new Date(candidate.auth_last_login_at).toLocaleString() : "No login yet"}
+                                </p>
+                                <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${candidate.auth_approved ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>
+                                  {candidate.auth_approved ? "Approved" : "Pending"}
+                                </span>
+                              </div>
+
+                              <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Imported duplicate to absorb</p>
+                                <p className="mt-2 font-sans text-xs text-foreground">{candidate.legacy_display_name || "No display name"}</p>
+                                <p className="mt-1 font-mono text-[10px] text-muted-foreground">{candidate.legacy_profile_id}</p>
+                                <p className="mt-1 font-sans text-[11px] text-muted-foreground">
+                                  Created {candidate.legacy_created_at ? new Date(candidate.legacy_created_at).toLocaleString() : "Unknown"}
+                                </p>
+                                <p className="mt-1 font-sans text-[11px] text-muted-foreground">
+                                  Last login {candidate.legacy_last_login_at ? new Date(candidate.legacy_last_login_at).toLocaleString() : "No recorded login"}
+                                </p>
+                                <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium ${candidate.legacy_approved ? "bg-emerald-500/15 text-emerald-600" : "bg-amber-500/15 text-amber-600"}`}>
+                                  {candidate.legacy_approved ? "Approved" : "Pending"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-sans text-foreground">{candidate.source_programs} programs</span>
+                              <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-sans text-foreground">{candidate.source_groups} groups</span>
+                              <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-sans text-foreground">{candidate.source_notes} notes</span>
+                              <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-sans text-foreground">{candidate.source_measurements} measurements</span>
+                              <span className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-sans text-foreground">{candidate.source_messages} messages</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => setMergeCandidate(candidate)}
+                            className="inline-flex items-center justify-center rounded-full bg-gold px-4 py-2 text-xs font-semibold text-gold-foreground transition-opacity hover:opacity-90 shrink-0"
+                          >
+                            {mergingDuplicateEmail === candidate.email ? "Merging..." : "Merge Profiles"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {reviewOnlyCandidates.length > 0 && (
+                  <div className="mt-4 rounded-[1.5rem] border border-border/70 bg-background/70 p-4">
+                    <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Review only</p>
+                    <div className="mt-3 space-y-2">
+                      {reviewOnlyCandidates.map((candidate) => (
+                        <div key={candidate.email} className="flex flex-col gap-1 rounded-2xl border border-border/70 bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-sans text-sm font-medium text-foreground">{candidate.email}</p>
+                            <p className="font-sans text-xs text-muted-foreground">{candidate.review_reason || "Requires manual review before merge."}</p>
+                          </div>
+                          <span className="rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+                            Review only
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {filteredUsers.map((u) => {
               const isVirtual = u._isVirtualInvite;
@@ -934,9 +1113,11 @@ const Admin = () => {
                         </IconButtonWithTooltip>
                       )}
                       {u.email && (
-                        <IconButtonWithTooltip tooltip="Send Reconnect Email" onClick={() => handleSendReconnect(u.email!, inviteInfo?.language)} className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1.5 text-accent-foreground hover:bg-accent/80 transition-colors">
+                        <IconButtonWithTooltip tooltip={u.approved ? "Send Reconnect Email" : "Grant Access & Reconnect"} onClick={() => handleSendReconnect(u.email!, inviteInfo?.language)} className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1.5 text-accent-foreground hover:bg-accent/80 transition-colors">
                           <RefreshCw className="h-4 w-4" />
-                          <span className="text-[10px] font-medium">{reconnectingEmail === u.email ? "Sending..." : "Reconnect"}</span>
+                          <span className="text-[10px] font-medium">
+                            {reconnectingEmail === u.email ? "Sending..." : u.approved ? "Reconnect" : "Grant & Reconnect"}
+                          </span>
                         </IconButtonWithTooltip>
                       )}
                     </div>
@@ -1079,6 +1260,31 @@ const Admin = () => {
             <AlertDialogCancel className="font-sans text-xs">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-sans text-xs">
               Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!mergeCandidate} onOpenChange={(open) => !open && setMergeCandidate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif">Merge duplicate client profiles</AlertDialogTitle>
+            <AlertDialogDescription className="font-sans text-sm leading-relaxed">
+              Keep the current login profile for <strong>{mergeCandidate?.email}</strong>, move all migrated client data from the imported duplicate into it, and remove the duplicate row after the transfer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-2xl border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
+            <p>Keep current login profile: <span className="font-mono text-[11px] text-foreground">{mergeCandidate?.auth_profile_id}</span></p>
+            <p className="mt-1">Move imported duplicate data from: <span className="font-mono text-[11px] text-foreground">{mergeCandidate?.legacy_profile_id}</span></p>
+            <p className="mt-2 text-foreground">Nothing outside this same-email client pair will be touched.</p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-sans text-xs">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleMergeDuplicate}
+              className="bg-gold text-gold-foreground hover:bg-gold/90 font-sans text-xs"
+            >
+              {mergingDuplicateEmail === mergeCandidate?.email ? "Merging..." : "Keep current login profile and merge data"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
