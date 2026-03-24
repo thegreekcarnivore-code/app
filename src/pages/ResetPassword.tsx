@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/context/LanguageContext";
@@ -17,11 +17,32 @@ const ResetPassword = () => {
   const [recoveryReady, setRecoveryReady] = useState<boolean | null>(null);
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     let active = true;
+    const tokenHash = searchParams.get("token_hash");
+    const type = searchParams.get("type");
 
     const syncRecoveryState = async () => {
+      if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+
+        if (!active) return;
+
+        if (error) {
+          setRecoveryReady(false);
+          return;
+        }
+
+        setRecoveryReady(true);
+        navigate("/reset-password", { replace: true });
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!active) return;
       setRecoveryReady(!!session?.user);
@@ -48,7 +69,7 @@ const ResetPassword = () => {
       window.clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, searchParams]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();

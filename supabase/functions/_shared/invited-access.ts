@@ -1,4 +1,4 @@
-import { buildAppUrl, getSupabaseProjectUrl } from "./app-config.ts";
+import { buildAppUrl } from "./app-config.ts";
 
 export type FeatureAccessRecord = Record<string, boolean>;
 
@@ -59,13 +59,13 @@ export interface EnsureInvitedClientAccessResult {
   invitationId: string | null;
 }
 
-function buildVerificationUrl({
+function buildAppAuthActionUrl({
   tokenHash,
   type,
   redirectTo,
 }: {
   tokenHash: string;
-  type: "magiclink" | "recovery";
+  type: "magiclink";
   redirectTo: string;
 }) {
   const params = new URLSearchParams({
@@ -74,7 +74,7 @@ function buildVerificationUrl({
     redirect_to: redirectTo,
   });
 
-  return `${getSupabaseProjectUrl()}/auth/v1/verify?${params.toString()}`;
+  return `${buildAppUrl("/auth/callback")}?${params.toString()}`;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -438,7 +438,7 @@ export async function ensureInvitedClientAccess(
   const tokenHash = magicLinkData?.properties?.hashed_token;
   const loginUrl =
     (typeof tokenHash === "string" && tokenHash
-      ? buildVerificationUrl({
+      ? buildAppAuthActionUrl({
           tokenHash,
           type: "magiclink",
           redirectTo,

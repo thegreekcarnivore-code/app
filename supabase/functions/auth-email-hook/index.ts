@@ -11,7 +11,6 @@ import { ReauthenticationEmail } from "../_shared/email-templates/reauthenticati
 import {
   buildAppUrl,
   getAppBaseUrl,
-  getSupabaseProjectUrl,
 } from "../_shared/app-config.ts";
 
 const corsHeaders = {
@@ -131,13 +130,22 @@ function buildAuthConfirmationUrl(emailType: EmailType, payload: SendEmailHookPa
     throw new Error(`Missing token_hash for auth email type "${emailType}"`);
   }
 
+  if (emailType === "recovery") {
+    const params = new URLSearchParams({
+      token_hash: tokenHash,
+      type: emailType,
+    });
+
+    return `${buildAppUrl("/reset-password")}?${params.toString()}`;
+  }
+
   const params = new URLSearchParams({
     token_hash: tokenHash,
     type: emailType,
     redirect_to: redirectTo,
   });
 
-  return `${getSupabaseProjectUrl()}/auth/v1/verify?${params.toString()}`;
+  return `${buildAppUrl("/auth/callback")}?${params.toString()}`;
 }
 
 function buildSampleData(emailType: EmailType) {
