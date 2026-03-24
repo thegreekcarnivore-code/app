@@ -1,4 +1,4 @@
-import { buildAppUrl } from "./app-config.ts";
+import { buildAppUrl, getSupabaseProjectUrl } from "./app-config.ts";
 
 export type FeatureAccessRecord = Record<string, boolean>;
 
@@ -57,6 +57,24 @@ export interface EnsureInvitedClientAccessResult {
   authUserCreated: boolean;
   legacyProfileMerged: boolean;
   invitationId: string | null;
+}
+
+function buildVerificationUrl({
+  tokenHash,
+  type,
+  redirectTo,
+}: {
+  tokenHash: string;
+  type: "magiclink" | "recovery";
+  redirectTo: string;
+}) {
+  const params = new URLSearchParams({
+    token_hash: tokenHash,
+    type,
+    redirect_to: redirectTo,
+  });
+
+  return `${getSupabaseProjectUrl()}/auth/v1/verify?${params.toString()}`;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -403,11 +421,13 @@ export async function ensureInvitedClientAccess(
     throw new Error(refreshedProfileError.message);
   }
 
+  const redirectTo = buildAppUrl(input.redirectPath || "/home");
+
   const { data: magicLinkData, error: magicLinkError } = await input.serviceClient.auth.admin.generateLink({
     type: "magiclink",
     email: normalizedEmail,
     options: {
-      redirectTo: buildAppUrl(input.redirectPath || "/home"),
+      redirectTo,
     },
   });
 
@@ -415,7 +435,17 @@ export async function ensureInvitedClientAccess(
     throw new Error(magicLinkError.message);
   }
 
-  const loginUrl = magicLinkData?.properties?.action_link;
+  const tokenHash = magicLinkData?.properties?.hashed_token;
+  const loginUrl =
+    (typeof tokenHash === "string" && tokenHash
+      ? buildVerificationUrl({
+          tokenHash,
+          type: "magiclink",
+          redirectTo,
+        })
+      : null) ||
+    magicLinkData?.properties?.action_link;
+
   if (!loginUrl) {
     throw new Error("Failed to generate direct-entry login link");
   }

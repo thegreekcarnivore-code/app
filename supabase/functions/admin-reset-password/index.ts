@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { RecoveryEmail } from "../_shared/email-templates/recovery.tsx";
-import { buildAppUrl } from "../_shared/app-config.ts";
+import { buildAppUrl, getSupabaseProjectUrl } from "../_shared/app-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +10,24 @@ const corsHeaders = {
 };
 
 const SENDER_DOMAIN = "thegreekcarnivore.com";
+
+function buildVerificationUrl({
+  tokenHash,
+  type,
+  redirectTo,
+}: {
+  tokenHash: string;
+  type: "recovery";
+  redirectTo: string;
+}) {
+  const params = new URLSearchParams({
+    token_hash: tokenHash,
+    type,
+    redirect_to: redirectTo,
+  });
+
+  return `${getSupabaseProjectUrl()}/auth/v1/verify?${params.toString()}`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -107,11 +125,13 @@ Deno.serve(async (req) => {
     }
 
     // Generate recovery link (bypasses rate limits)
+    const redirectTo = buildAppUrl("/reset-password");
+
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email: trimmedEmail,
       options: {
-        redirectTo: buildAppUrl("/reset-password"),
+        redirectTo,
       },
     });
 
@@ -123,7 +143,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    const actionLink = linkData?.properties?.action_link || "";
+    const tokenHash = linkData?.properties?.hashed_token;
+    const actionLink =
+      (typeof tokenHash === "string" && tokenHash
+        ? buildVerificationUrl({
+            tokenHash,
+            type: "recovery",
+            redirectTo,
+          })
+        : null) ||
+      linkData?.properties?.action_link ||
+      "";
+
     if (!actionLink) {
       return new Response(JSON.stringify({ error: "Failed to generate reset link" }), {
         status: 500,
