@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { buildAppUrl, getAppBaseUrl, getEmailLogoUrl } from "../_shared/app-config.ts";
+import { getEmailLogoUrl } from "../_shared/app-config.ts";
+import { ensureInvitedClientAccess, toFeatureAccessRecord } from "../_shared/invited-access.ts";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -10,7 +11,6 @@ const logStep = (step: string, details?: any) => {
 
 const FROM_EMAIL = "The Greek Carnivore <noreply@thegreekcarnivore.com>";
 const LOGO_URL = getEmailLogoUrl();
-const APP_URL = getAppBaseUrl();
 
 function formatGreekDate(dateStr: string): string {
   try {
@@ -23,7 +23,7 @@ function formatGreekDate(dateStr: string): string {
   }
 }
 
-function buildWelcomeEmail(programName: string, durationWeeks: number, startDate: string, firstName: string): string {
+function buildWelcomeEmail(programName: string, durationWeeks: number, startDate: string, firstName: string, loginUrl: string): string {
   const months = Math.round(durationWeeks / 4.33);
   const durationLabel = months >= 2 ? `${months} μήνες` : `${durationWeeks} εβδομάδες`;
   const formattedStart = formatGreekDate(startDate);
@@ -59,8 +59,8 @@ function buildWelcomeEmail(programName: string, durationWeeks: number, startDate
       <li>Βγάλε τις πρώτες φωτογραφίες προόδου</li>
       <li>Εξερεύνησε τα εκπαιδευτικά βίντεο</li>
     </ol>
-    <a href="${APP_URL}/profile" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;margin:0 0 12px;">
-      Δες το Προφίλ σου
+    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;margin:0 0 12px;">
+      Μπες στην Εφαρμογή
     </a>
     <hr style="border:none;border-top:1px solid #eee;margin:32px 0 20px;" />
     <p style="font-size:13px;color:#888;line-height:1.6;margin:0 0 4px;">Σε περιμένει ένα υπέροχο ταξίδι μεταμόρφωσης! 💪</p>
@@ -70,66 +70,20 @@ function buildWelcomeEmail(programName: string, durationWeeks: number, startDate
 </html>`;
 }
 
-async function autoEnrollExistingUser(
+async function fetchProgramFeatureAccess(
   supabase: any,
-  userId: string,
   programTemplateId: string | null,
-  startDate: string,
-  adminId: string,
 ) {
   if (!programTemplateId) {
-    logStep("No program_template_id, skipping auto-enroll");
-    return;
+    return null;
   }
 
-  // Check if enrollment already exists
-  const { data: existing } = await supabase
-    .from("client_program_enrollments")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("program_template_id", programTemplateId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (existing) {
-    logStep("Active enrollment already exists", { enrollmentId: existing.id });
-    return;
-  }
-
-  // Get feature_access from program template
-  let featureAccess = {};
   const { data: tpl } = await supabase
     .from("program_templates")
     .select("feature_access")
     .eq("id", programTemplateId)
     .single();
-  if (tpl) featureAccess = tpl.feature_access;
-
-  // Create enrollment
-  const { error: enrollErr } = await supabase
-    .from("client_program_enrollments")
-    .insert({
-      user_id: userId,
-      program_template_id: programTemplateId,
-      start_date: startDate || new Date().toISOString().split("T")[0],
-      status: "active",
-      feature_access_override: featureAccess,
-      created_by: adminId,
-    });
-
-  if (enrollErr) {
-    logStep("Failed to create enrollment", { error: enrollErr.message });
-  } else {
-    logStep("Auto-created enrollment", { userId, programTemplateId });
-  }
-
-  // Approve user and set feature_access
-  await supabase
-    .from("profiles")
-    .update({ approved: true, feature_access: featureAccess })
-    .eq("id", userId);
-
-  logStep("Updated profile approved + feature_access", { userId });
+  return toFeatureAccessRecord(tpl?.feature_access);
 }
 
 async function sendWelcomeEmailForExistingUser(
@@ -138,6 +92,7 @@ async function sendWelcomeEmailForExistingUser(
   programName: string,
   programTemplateId: string | null,
   startDate: string,
+  loginUrl: string,
 ) {
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {
@@ -167,7 +122,7 @@ async function sendWelcomeEmailForExistingUser(
   }
 
   const firstName = profile.display_name || profile.email.split("@")[0] || "there";
-  const html = buildWelcomeEmail(programName, durationWeeks, startDate, firstName);
+  const html = buildWelcomeEmail(programName, durationWeeks, startDate, firstName, loginUrl);
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -190,70 +145,24 @@ async function sendWelcomeEmailForExistingUser(
   }
 }
 
-async function createInvitationAndSendInvite(
+async function grantPaidAccess(
   supabase: any,
   clientEmail: string,
-  programName: string,
   programTemplateId: string | null,
   startDate: string,
   adminId: string,
 ) {
-  // Check for existing pending invitation
-  const { data: existing } = await supabase
-    .from("email_invitations")
-    .select("id")
-    .eq("email", clientEmail)
-    .eq("status", "pending")
-    .maybeSingle();
-
-  // Get feature_access from program template if available
-  let featureAccess = {};
-  if (programTemplateId) {
-    const { data: tpl } = await supabase
-      .from("program_templates")
-      .select("feature_access")
-      .eq("id", programTemplateId)
-      .single();
-    if (tpl) featureAccess = tpl.feature_access;
-  }
-
-  if (!existing) {
-    // Create invitation row so handle_new_user trigger auto-enrolls on signup
-    const { error: insertErr } = await supabase
-      .from("email_invitations")
-      .insert({
-        email: clientEmail,
-        language: "el",
-        feature_access: featureAccess,
-        program_template_id: programTemplateId || null,
-        start_date: startDate || new Date().toISOString().split("T")[0],
-        created_by: adminId,
-      });
-    if (insertErr) {
-      logStep("Failed to create email_invitation", { error: insertErr.message });
-    } else {
-      logStep("Created email_invitation for prospect", { email: clientEmail });
-    }
-  } else {
-    logStep("Pending invitation already exists", { email: clientEmail });
-  }
-
-  // Send auth invite so they can create an account
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const userMetadata: Record<string, string> = { language: "el" };
-  if (programName) userMetadata.program_name = programName;
-  if (startDate) userMetadata.start_date = startDate;
-
-  const { error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(clientEmail, {
-    redirectTo: buildAppUrl("/auth"),
-    data: userMetadata,
+  const featureAccess = await fetchProgramFeatureAccess(supabase, programTemplateId);
+  return await ensureInvitedClientAccess({
+    serviceClient: supabase,
+    email: clientEmail,
+    language: "el",
+    featureAccess,
+    programTemplateId,
+    startDate,
+    createdBy: adminId,
+    redirectPath: "/home",
   });
-
-  if (inviteErr) {
-    logStep("Failed to send auth invite", { error: inviteErr.message });
-  } else {
-    logStep("Auth invite sent to prospect", { email: clientEmail });
-  }
 }
 
 serve(async (req) => {
@@ -338,14 +247,25 @@ serve(async (req) => {
         if (clientUserId) {
           // Existing user → auto-enroll + send welcome email
           logStep("Auto-enrolling and sending welcome email to existing user", { clientUserId });
-          await autoEnrollExistingUser(supabase, clientUserId, programTemplateId, startDate, adminId);
-          await sendWelcomeEmailForExistingUser(supabase, clientUserId, programName, programTemplateId, startDate);
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", clientUserId)
+            .maybeSingle();
+
+          const targetEmail = clientEmail || existingProfile?.email;
+          if (!targetEmail) {
+            throw new Error("Missing client email for paid access grant");
+          }
+
+          const accessResult = await grantPaidAccess(supabase, targetEmail, programTemplateId, startDate, adminId);
+          await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
           // Send day-1 welcome messages immediately
           try {
             await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-day-zero-messages`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-              body: JSON.stringify({ user_id: clientUserId }),
+              body: JSON.stringify({ user_id: accessResult.userId }),
             });
           } catch (e) { console.error("Day-0 messages error:", e); }
         } else if (clientEmail) {
@@ -358,19 +278,20 @@ serve(async (req) => {
 
           if (existingProfile) {
             logStep("Found existing profile by email, auto-enrolling + sending welcome", { email: clientEmail });
-            await autoEnrollExistingUser(supabase, existingProfile.id, programTemplateId, startDate, adminId);
-            await sendWelcomeEmailForExistingUser(supabase, existingProfile.id, programName, programTemplateId, startDate);
+            const accessResult = await grantPaidAccess(supabase, clientEmail, programTemplateId, startDate, adminId);
+            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
             // Send day-1 welcome messages immediately
             try {
               await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-day-zero-messages`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-                body: JSON.stringify({ user_id: existingProfile.id }),
+                body: JSON.stringify({ user_id: accessResult.userId }),
               });
             } catch (e) { console.error("Day-0 messages error:", e); }
           } else {
-            logStep("Prospect has no account, creating invitation + sending invite", { email: clientEmail });
-            await createInvitationAndSendInvite(supabase, clientEmail, programName, programTemplateId, startDate, adminId);
+            logStep("Prospect has no account, granting access + sending direct-entry welcome", { email: clientEmail });
+            const accessResult = await grantPaidAccess(supabase, clientEmail, programTemplateId, startDate, adminId);
+            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
           }
         }
         break;

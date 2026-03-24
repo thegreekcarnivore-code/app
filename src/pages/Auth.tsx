@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,26 +10,15 @@ import logo from "@/assets/logo.png";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
-  const inviteToken = searchParams.get("invite");
   const mode = searchParams.get("mode");
-  const [isLogin, setIsLogin] = useState(inviteToken ? false : mode !== "signup");
+  const [isLogin, setIsLogin] = useState(mode !== "signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp } = useAuth();
   const { t, lang, toggleLanguage } = useLanguage();
-
-  useEffect(() => {
-    if (user && inviteToken) {
-      supabase.rpc("use_invite_token", { _token: inviteToken, _user_id: user.id }).then(({ data }) => {
-        if (data) {
-          toast({ title: lang === "el" ? "Πρόσκληση αποδεκτή!" : "Invite accepted!", description: lang === "el" ? "Ο λογαριασμός σας εγκρίθηκε αυτόματα." : "Your account has been auto-approved." });
-        }
-      });
-    }
-  }, [user, inviteToken]);
 
   const friendlyError = (error: Error, isSignUp: boolean): string => {
     const msg = error.message.toLowerCase();
@@ -183,9 +172,7 @@ const Auth = () => {
                 ? (lang === "el" ? "Εισάγετε το email σας για να λάβετε σύνδεσμο επαναφοράς." : "Enter your email to receive a reset link.")
                 : isLogin
                   ? (lang === "el" ? "Συνδέσου για να συνεχίσεις στο πρόγραμμα και στον πίνακα ελέγχου σου." : "Sign in to continue to your program and daily dashboard.")
-                  : inviteToken
-                    ? (lang === "el" ? "Η πρόσκλησή σου είναι έτοιμη. Δημιούργησε τον λογαριασμό σου για να ενεργοποιηθεί η πρόσβαση." : "Your invite is ready. Create your account to activate access.")
-                    : (lang === "el" ? "Αν έχεις εγκριθεί από τον coach σου, δημιούργησε λογαριασμό για να ξεκινήσει η εισαγωγή." : "If you have been approved by your coach, create your account to start onboarding.")}
+                  : (lang === "el" ? "Αν έχεις εγκριθεί από τον coach σου, δημιούργησε λογαριασμό για να ξεκινήσει η εισαγωγή." : "If you have been approved by your coach, create your account to start onboarding.")}
             </p>
           </div>
 
@@ -203,19 +190,8 @@ const Auth = () => {
                 onClick={() => setIsLogin(false)}
                 className={`rounded-[1rem] px-4 py-2.5 font-sans text-sm font-medium transition-all ${!isLogin ? "bg-gold text-gold-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {inviteToken ? (lang === "el" ? "Ενεργοποίηση" : "Activate access") : (lang === "el" ? "Αίτημα πρόσβασης" : "Request access")}
+                {lang === "el" ? "Αίτημα πρόσβασης" : "Request access"}
               </button>
-            </div>
-          )}
-
-          {inviteToken && !forgotMode && (
-            <div className="rounded-[1.5rem] border border-gold/25 bg-gold/10 px-4 py-3 text-left">
-              <p className="font-sans text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-                {lang === "el" ? "Πρόσκληση" : "Invite ready"}
-              </p>
-              <p className="mt-1 font-sans text-sm text-foreground">
-                {lang === "el" ? "Ο λογαριασμός σου θα συνδεθεί αυτόματα με την πρόσκληση μόλις ολοκληρώσεις την εγγραφή." : "Your account will be linked to the invite automatically as soon as sign-up is complete."}
-              </p>
             </div>
           )}
 
@@ -268,9 +244,9 @@ const Auth = () => {
                       {lang === "el" ? "Τι γίνεται μετά" : "What happens next"}
                     </p>
                     <p className="font-sans text-xs leading-relaxed text-muted-foreground">
-                      {inviteToken
-                        ? (lang === "el" ? "Η πρόσκλησή σου θα ενεργοποιηθεί, θα μπεις στην εφαρμογή και θα ξεκινήσει η καθοδηγούμενη ρύθμιση." : "Your invite will activate, the app will open, and the guided setup flow will begin.")
-                        : (lang === "el" ? "Ο λογαριασμός σου περνάει από έγκριση και μετά ανοίγουν η εισαγωγή, η υπογραφή πολιτικής και ο πίνακας ελέγχου σου." : "Your account goes through approval and then unlocks onboarding, policy signing, and your daily dashboard.")}
+                      {lang === "el"
+                        ? "Ο λογαριασμός σου περνάει από έγκριση και μετά ανοίγουν η εισαγωγή, η υπογραφή πολιτικής και ο πίνακας ελέγχου σου."
+                        : "Your account goes through approval and then unlocks onboarding, policy signing, and your daily dashboard."}
                     </p>
                     <p className="font-sans text-[11px] text-muted-foreground">{t("passwordRequirement")}</p>
                   </div>
@@ -289,9 +265,7 @@ const Auth = () => {
                     ? t("pleaseWait")
                     : isLogin
                       ? t("signIn")
-                      : inviteToken
-                        ? (lang === "el" ? "Ενεργοποίηση λογαριασμού" : "Activate account")
-                        : (lang === "el" ? "Υποβολή πρόσβασης" : "Request access")}
+                      : (lang === "el" ? "Υποβολή πρόσβασης" : "Request access")}
                 </button>
               </form>
 

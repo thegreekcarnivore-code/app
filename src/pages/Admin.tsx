@@ -10,7 +10,6 @@ import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
 import AdminGroupManager from "@/components/admin/AdminGroupManager";
 import InviteClientPanel from "@/components/admin/InviteClientPanel";
-import InviteLinkGenerator from "@/components/admin/InviteLinkGenerator";
 import IconButtonWithTooltip from "@/components/IconButtonWithTooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -111,7 +110,7 @@ interface UserEnrollmentInfo {
 
 const ADMIN_TABS = [
   { key: "users", label: "Clients", icon: Users, description: "Client records, approvals, invitations, and direct actions." },
-  { key: "invites", label: "Invites", icon: Link2, description: "Invitation links and email-based onboarding access." },
+  { key: "invites", label: "Invites", icon: Link2, description: "Direct-entry email access, invite history, and reconnect flows." },
   { key: "programs", label: "Programs", icon: BookOpen, description: "Program templates, structure, and assigned content." },
   { key: "calls", label: "Calls", icon: Video, description: "Upcoming calls, schedules, and participation management." },
   { key: "categories", label: "Categories", icon: Tag, description: "Client grouping, tagging, and access segmentation." },
@@ -429,7 +428,7 @@ const Admin = () => {
     if (error || data?.error) {
       toast({ title: "Error", description: error?.message || data?.error, variant: "destructive" });
     } else {
-      toast({ title: "Invitation resent", description: `Reminder sent to ${email}` });
+      toast({ title: "Access link resent", description: `A fresh direct-entry link was sent to ${email}` });
       fetchInvitations();
     }
   };
@@ -977,7 +976,7 @@ const Admin = () => {
                 statusBadge = (
                   <Badge className="bg-orange-500/15 text-orange-600 border-orange-500/30 text-[10px] gap-1">
                     <Mail className="h-2.5 w-2.5" />
-                    Invitation Sent
+                    Direct access sent
                   </Badge>
                 );
               } else if (!u.last_login_at && inviteInfo && inviteInfo.status === "used") {
@@ -1074,9 +1073,9 @@ const Admin = () => {
                   {/* Action buttons — limited for virtual invites */}
                   {isVirtual ? (
                     <div className="flex items-center gap-1.5">
-                      <IconButtonWithTooltip tooltip="Resend Invitation" onClick={() => u.email && handleResendInvite(u.email)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
+                      <IconButtonWithTooltip tooltip="Resend Access Link" onClick={() => u.email && handleResendInvite(u.email)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
                         <Send className="h-4 w-4" />
-                        <span className="text-[10px] font-medium">{resendingEmail === u.email ? "Sending..." : "Resend"}</span>
+                        <span className="text-[10px] font-medium">{resendingEmail === u.email ? "Sending..." : "Resend Link"}</span>
                       </IconButtonWithTooltip>
                       <IconButtonWithTooltip tooltip="Cancel Invitation" onClick={async () => {
                         const realId = u.id.replace("inv-", "");
@@ -1130,9 +1129,9 @@ const Admin = () => {
                         <span className="text-[10px] font-medium">Delete</span>
                       </IconButtonWithTooltip>
                       {showResend && u.email && (
-                        <IconButtonWithTooltip tooltip="Resend Invitation" onClick={() => handleResendInvite(u.email!)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
+                        <IconButtonWithTooltip tooltip="Resend Direct Access Link" onClick={() => handleResendInvite(u.email!)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
                           <Send className="h-4 w-4" />
-                          <span className="text-[10px] font-medium">{resendingEmail === u.email ? "Sending..." : "Resend Invite"}</span>
+                          <span className="text-[10px] font-medium">{resendingEmail === u.email ? "Sending..." : "Resend Link"}</span>
                         </IconButtonWithTooltip>
                       )}
                       {u.email && (
@@ -1188,9 +1187,14 @@ const Admin = () => {
 
         {activeTab === "invites" && (
           <div className="space-y-8">
-            <InviteLinkGenerator />
-            <div className="border-t border-border pt-6">
-              <h3 className="font-serif text-sm font-semibold text-foreground mb-4">Send Email Invitation</h3>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="space-y-1 mb-4">
+                <p className="font-sans text-xs font-semibold uppercase tracking-[0.18em] text-gold">Direct entry access</p>
+                <h3 className="font-serif text-lg font-semibold text-foreground">Invite and grant access in one step</h3>
+                <p className="font-sans text-sm text-muted-foreground">
+                  Admin-issued invite emails now approve the client immediately and send a direct-entry login link to the app.
+                </p>
+              </div>
               <InviteClientPanel />
             </div>
           </div>

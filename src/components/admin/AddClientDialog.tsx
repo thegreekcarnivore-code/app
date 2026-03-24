@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,6 @@ interface Props {
 }
 
 const AddClientDialog = ({ open, onOpenChange, onClientAdded }: Props) => {
-  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [language, setLanguage] = useState<"en" | "el">("el");
   const [assignProgram, setAssignProgram] = useState(false);
@@ -112,7 +110,7 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: Props) => {
     } else if (data?.error) {
       toast({ title: "Error", description: data.error, variant: "destructive" });
     } else {
-      toast({ title: "Invitation sent!", description: `Email sent to ${email}` });
+      toast({ title: "Access granted!", description: `A direct-entry link was sent to ${email}` });
       // Reset form
       setEmail("");
       setAssignProgram(false);
@@ -128,7 +126,7 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: Props) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif">Add New Client</DialogTitle>
+          <DialogTitle className="font-serif">Add Client & Grant Access</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -290,6 +288,12 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: Props) => {
             </div>
           )}
 
+          <div className="rounded-lg border border-gold/25 bg-gold/10 px-3 py-2.5">
+            <p className="font-sans text-[11px] font-medium text-foreground">
+              The email we send from here approves the client immediately and gives them a direct-entry link to the app.
+            </p>
+          </div>
+
           {/* Submit */}
           <button
             onClick={handleSubmit}
@@ -297,7 +301,7 @@ const AddClientDialog = ({ open, onOpenChange, onClientAdded }: Props) => {
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 font-sans text-sm font-semibold text-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {sending ? "Sending Invitation..." : "Add Client & Send Invitation"}
+            {sending ? "Granting Access..." : "Add Client & Send Direct Access"}
           </button>
         </div>
       </DialogContent>

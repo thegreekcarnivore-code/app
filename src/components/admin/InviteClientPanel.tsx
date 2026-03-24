@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +30,6 @@ interface Invitation {
 }
 
 const InviteClientPanel = () => {
-  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [language, setLanguage] = useState<"en" | "el">("en");
   const [assignProgram, setAssignProgram] = useState(false);
@@ -86,7 +84,7 @@ const InviteClientPanel = () => {
         program_template_id: assignProgram ? programId : null,
         start_date: assignProgram && startDate ? format(startDate, "yyyy-MM-dd") : null,
         measurement_day: assignProgram && measurementDay ? Number(measurementDay) : null,
-        group_id: selectedGroupId || null,
+        group_id: selectedGroupId && selectedGroupId !== "none" ? selectedGroupId : null,
       },
     });
 
@@ -96,7 +94,7 @@ const InviteClientPanel = () => {
     } else if (data?.error) {
       toast({ title: "Error", description: data.error, variant: "destructive" });
     } else {
-      toast({ title: "Invitation sent", description: `Email sent to ${email}` });
+      toast({ title: "Access granted", description: `A direct-entry link was sent to ${email}` });
       setEmail("");
       fetchInvitations();
     }
@@ -107,7 +105,10 @@ const InviteClientPanel = () => {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-        <h3 className="font-serif text-sm font-semibold text-foreground">Send Invitation</h3>
+        <h3 className="font-serif text-sm font-semibold text-foreground">Invite & Grant Access</h3>
+        <p className="font-sans text-xs leading-relaxed text-muted-foreground">
+          Clients invited from here are approved immediately and receive a direct-entry login link for the app.
+        </p>
 
         <div>
           <Label className="font-sans text-xs">Client Email</Label>
@@ -249,14 +250,14 @@ const InviteClientPanel = () => {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 font-sans text-sm font-semibold text-gold-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
-          {sending ? "Sending..." : "Send Invitation"}
+          {sending ? "Sending..." : "Send Direct Access"}
         </button>
       </div>
 
       {/* Invitation history */}
       {invitations.length > 0 && (
         <div className="space-y-2">
-          <h3 className="font-serif text-sm font-semibold text-foreground">Recent Invitations</h3>
+          <h3 className="font-serif text-sm font-semibold text-foreground">Recent Access Emails</h3>
           {invitations.map((inv) => (
             <div key={inv.id} className="rounded-xl border border-border bg-card px-4 py-3 space-y-1">
               <div className="flex items-center justify-between">
