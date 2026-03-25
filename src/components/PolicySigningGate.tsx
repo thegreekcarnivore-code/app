@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { CheckCircle2, FileSignature, Globe, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, Globe, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
@@ -297,34 +297,22 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
   if (hasSigned) return <>{children}</>;
 
   const policyText = docLang === "el" ? POLICY_EL : POLICY_EN;
-  const introPoints = [
-    {
-      icon: Sparkles,
-      title: docLang === "el" ? "Τελευταίο βήμα πριν μπεις" : "Final step before entry",
-      body: docLang === "el"
-        ? "Διαβάζεις το έγγραφο μία φορά, υπογράφεις και μετά ανοίγει κανονικά ο λογαριασμός σου."
-        : "Review the document once, sign it, and your account opens normally.",
-    },
-    {
-      icon: ShieldCheck,
-      title: docLang === "el" ? "Όροι + δεδομένα σε ένα σημείο" : "Terms + data in one place",
-      body: docLang === "el"
-        ? "Το έγγραφο εξηγεί πώς δουλεύει το coaching και πώς χρησιμοποιούνται τα δεδομένα σου μέσα στην υπηρεσία."
-        : "The document explains how the coaching works and how your data may be used in the service.",
-    },
-    {
-      icon: FileSignature,
-      title: docLang === "el" ? "Καθαρή αποδοχή" : "Clear acceptance",
-      body: docLang === "el"
-        ? "Γράφεις το ονοματεπώνυμό σου, προσθέτεις υπογραφή και συνεχίζεις χωρίς άλλο εμπόδιο."
-        : "Type your full name, add your signature, and continue without another blocker.",
-    },
-  ];
+  const signingSteps = docLang === "el"
+    ? [
+        "Διάβασε το έγγραφο.",
+        "Γράψε το ονοματεπώνυμό σου.",
+        "Υπόγραψε και συνέχισε.",
+      ]
+    : [
+        "Read the agreement.",
+        "Type your full name.",
+        "Sign and continue.",
+      ];
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col bg-background">
       <div className="border-b border-border/80 bg-background/95 px-4 py-4 backdrop-blur sm:px-6">
-        <div className="mx-auto flex w-full max-w-7xl items-start justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">
               <Sparkles className="h-3 w-3" />
@@ -334,15 +322,15 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
               <h1 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl">
                 {docLang === "el" ? "Διαβάζεις και υπογράφεις πριν συνεχίσεις" : "Review and sign before continuing"}
               </h1>
-              <p className="max-w-3xl font-sans text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {docLang === "el"
-                  ? "Το έγγραφο αυτό συγκεντρώνει τους όρους του coaching προγράμματος και τον τρόπο με τον οποίο χρησιμοποιούνται τα δεδομένα σου μέσα στην πλατφόρμα."
-                  : "This document brings together the coaching program terms and how your data may be used within the platform."}
+                  ? "Διάβασε τους βασικούς όρους, υπέγραψε και μπες κανονικά στο dashboard σου."
+                  : "Read the core terms, sign, and enter your dashboard normally."}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden rounded-2xl border border-border/70 bg-card px-3 py-2 text-right sm:block">
+            <div className="hidden rounded-2xl border border-border/70 bg-card px-3 py-2 text-right lg:block">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                 {docLang === "el" ? "Βήμα 1/1" : "Step 1/1"}
               </p>
@@ -363,23 +351,22 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
-        <div className="mx-auto grid h-full w-full max-w-7xl gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,420px)]">
-          <div className="flex min-h-0 flex-col rounded-[2rem] border border-border/70 bg-card/80 shadow-sm">
+        <div className="mx-auto grid h-full w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-h-0 overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-sm">
             <div className="border-b border-border/70 px-5 py-4 sm:px-6">
-              <div className="grid gap-3 md:grid-cols-3">
-                {introPoints.map(({ icon: Icon, title, body }) => (
-                  <div key={title} className="rounded-[1.25rem] border border-border/60 bg-background/70 p-4">
-                    <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gold/10 text-gold">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h2 className="font-serif text-lg font-semibold text-foreground">{title}</h2>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
+                  {docLang === "el" ? "Όροι συνεργασίας & δεδομένα" : "Coaching terms & data"}
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {docLang === "el"
+                    ? "Διάβασε το έγγραφο πλήρως. Η υπογραφή σου αποθηκεύεται ως αποδοχή των όρων."
+                    : "Read the agreement fully. Your signature is stored as acceptance of these terms."}
+                </p>
               </div>
             </div>
 
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollArea className="h-full max-h-[calc(100vh-14rem)] lg:max-h-[calc(100vh-11rem)]">
               <div className="mx-auto max-w-4xl px-5 py-6 sm:px-8 sm:py-8">
                 <div
                   className="prose prose-sm max-w-none font-sans text-foreground
@@ -397,8 +384,8 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
             </ScrollArea>
           </div>
 
-          <div className="min-h-0">
-            <div className="flex h-full flex-col rounded-[2rem] border border-border/70 bg-card shadow-sm">
+          <div className="min-h-0 lg:sticky lg:top-0">
+            <div className="flex h-full flex-col rounded-[2rem] border border-border/70 bg-card shadow-sm lg:max-h-[calc(100vh-9rem)]">
               <div className="border-b border-border/70 px-5 py-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
                   {docLang === "el" ? "Αποδοχή & Υπογραφή" : "Acceptance & Signature"}
@@ -406,23 +393,20 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
                 <h2 className="mt-2 font-serif text-2xl font-semibold text-foreground">
                   {docLang === "el" ? "Ολοκλήρωσε την πρόσβασή σου" : "Complete your access"}
                 </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {docLang === "el"
-                    ? "Δήλωσε ότι διάβασες τους όρους, αποδέχεσαι το πλαίσιο συνεργασίας και ενημερώθηκες για τη χρήση των δεδομένων σου."
-                    : "Confirm that you reviewed the terms, accept the coaching framework, and were informed about how your data may be used."}
-                </p>
               </div>
 
-              <div className="flex-1 space-y-5 px-5 py-5">
+              <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
                 <div className="rounded-[1.5rem] border border-border/70 bg-background/70 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
-                    {docLang === "el" ? "Πριν υπογράψεις" : "Before you sign"}
-                  </p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {docLang === "el"
-                      ? "Ανέβασε μέχρι το τέλος του εγγράφου, βεβαιώσου ότι το έχεις διαβάσει και μετά συμπλήρωσε το ονοματεπώνυμο και την υπογραφή σου."
-                      : "Review the agreement fully, then complete your full name and signature below."}
-                  </p>
+                  <ol className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+                    {signingSteps.map((step, index) => (
+                      <li key={step} className="flex items-start gap-3">
+                        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gold/10 text-[11px] font-semibold text-gold">
+                          {index + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
 
                 <div className="space-y-2">
@@ -442,12 +426,12 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
                     {docLang === "el" ? "Υπογραφή" : "Signature"}
                   </Label>
                   <div className="rounded-[1.5rem] border border-border/70 bg-background/70 p-3">
-                    <SignatureCanvas onSignatureChange={setSignatureDataUrl} />
+                    <SignatureCanvas onSignatureChange={setSignatureDataUrl} height={170} />
                   </div>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {docLang === "el"
-                      ? "Η υπογραφή αποθηκεύεται ως αποδεικτικό αποδοχής του παρόντος εγγράφου."
-                      : "Your signature is stored as evidence that you accepted this document."}
+                      ? "Η υπογραφή σου αποθηκεύεται ως αποδοχή του εγγράφου."
+                      : "Your signature is stored as acceptance of this agreement."}
                   </p>
                 </div>
               </div>
