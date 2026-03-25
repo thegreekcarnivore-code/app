@@ -371,8 +371,8 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
                 <div
                   className="prose prose-sm max-w-none font-sans text-foreground
                   prose-headings:font-serif prose-headings:text-foreground
-                  prose-h1:mb-5 prose-h1:text-3xl
-                  prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-xl
+                  prose-h1:mb-6 prose-h1:text-3xl prose-h1:font-semibold
+                  prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-[1.65rem] prose-h2:font-semibold prose-h2:leading-tight
                   prose-p:text-base prose-p:leading-8 prose-p:text-muted-foreground
                   prose-li:text-base prose-li:leading-8 prose-li:text-muted-foreground
                   prose-strong:text-foreground
