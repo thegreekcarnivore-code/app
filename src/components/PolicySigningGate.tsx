@@ -310,17 +310,17 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
       ];
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-background">
+    <div className="fixed inset-0 z-[200] overflow-y-auto bg-background">
       <div className="border-b border-border/80 bg-background/95 px-4 py-4 backdrop-blur sm:px-6">
-        <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-4">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-gold">
               <Sparkles className="h-3 w-3" />
               {docLang === "el" ? "Τελικό setup" : "Final setup"}
             </div>
             <div className="space-y-1">
-              <h1 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl">
-                {docLang === "el" ? "Διαβάζεις και υπογράφεις πριν συνεχίσεις" : "Review and sign before continuing"}
+              <h1 className="max-w-xl font-serif text-[2.15rem] font-semibold leading-tight text-foreground sm:text-3xl">
+                {docLang === "el" ? "Διάβασε και υπέγραψε για να συνεχίσεις" : "Review and sign to continue"}
               </h1>
               <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {docLang === "el"
@@ -329,7 +329,7 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
             <div className="hidden rounded-2xl border border-border/70 bg-card px-3 py-2 text-right lg:block">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                 {docLang === "el" ? "Βήμα 1/1" : "Step 1/1"}
@@ -350,9 +350,9 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
-        <div className="mx-auto grid h-full w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-h-0 overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-sm">
+      <div className="px-4 py-4 pb-10 sm:px-6">
+        <div className="mx-auto grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-card/80 shadow-sm">
             <div className="border-b border-border/70 px-5 py-4 sm:px-6">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
@@ -366,15 +366,15 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
               </div>
             </div>
 
-            <ScrollArea className="h-full max-h-[calc(100vh-14rem)] lg:max-h-[calc(100vh-11rem)]">
+            <ScrollArea className="max-h-[52vh] lg:max-h-[calc(100vh-11rem)]">
               <div className="mx-auto max-w-4xl px-5 py-6 sm:px-8 sm:py-8">
                 <div
                   className="prose prose-sm max-w-none font-sans text-foreground
                   prose-headings:font-serif prose-headings:text-foreground
-                  prose-h1:mb-6 prose-h1:text-3xl prose-h1:font-semibold
-                  prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-[1.65rem] prose-h2:font-semibold prose-h2:leading-tight
-                  prose-p:text-base prose-p:leading-8 prose-p:text-muted-foreground
-                  prose-li:text-base prose-li:leading-8 prose-li:text-muted-foreground
+                  prose-h1:mb-5 prose-h1:text-[2rem] prose-h1:font-semibold sm:prose-h1:text-3xl
+                  prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-[1.4rem] prose-h2:font-semibold prose-h2:leading-tight sm:prose-h2:mt-10 sm:prose-h2:mb-4 sm:prose-h2:text-[1.65rem]
+                  prose-p:text-[15px] prose-p:leading-7 prose-p:text-muted-foreground sm:prose-p:text-base sm:prose-p:leading-8
+                  prose-li:text-[15px] prose-li:leading-7 prose-li:text-muted-foreground sm:prose-li:text-base sm:prose-li:leading-8
                   prose-strong:text-foreground
                   prose-hr:border-border"
                 >
@@ -384,18 +384,18 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
             </ScrollArea>
           </div>
 
-          <div className="min-h-0 lg:sticky lg:top-0">
-            <div className="flex h-full flex-col rounded-[2rem] border border-border/70 bg-card shadow-sm lg:max-h-[calc(100vh-9rem)]">
+          <div className="lg:sticky lg:top-4">
+            <div className="flex flex-col rounded-[2rem] border border-border/70 bg-card shadow-sm lg:max-h-[calc(100vh-9rem)]">
               <div className="border-b border-border/70 px-5 py-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
                   {docLang === "el" ? "Αποδοχή & Υπογραφή" : "Acceptance & Signature"}
                 </p>
-                <h2 className="mt-2 font-serif text-2xl font-semibold text-foreground">
+                <h2 className="mt-2 font-serif text-xl font-semibold leading-tight text-foreground sm:text-2xl">
                   {docLang === "el" ? "Ολοκλήρωσε την πρόσβασή σου" : "Complete your access"}
                 </h2>
               </div>
 
-              <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+              <div className="space-y-5 px-5 py-5 lg:flex-1 lg:overflow-y-auto">
                 <div className="rounded-[1.5rem] border border-border/70 bg-background/70 p-4">
                   <ol className="space-y-2 text-sm leading-relaxed text-muted-foreground">
                     {signingSteps.map((step, index) => (
@@ -426,7 +426,7 @@ const PolicySigningGate = ({ children }: { children: React.ReactNode }) => {
                     {docLang === "el" ? "Υπογραφή" : "Signature"}
                   </Label>
                   <div className="rounded-[1.5rem] border border-border/70 bg-background/70 p-3">
-                    <SignatureCanvas onSignatureChange={setSignatureDataUrl} height={170} />
+                    <SignatureCanvas onSignatureChange={setSignatureDataUrl} height={150} />
                   </div>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {docLang === "el"
