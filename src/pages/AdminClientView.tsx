@@ -230,8 +230,9 @@ const AdminClientView = () => {
         results.map(async (item: any) => {
           if (!item.signature_url) return item;
           const match = item.signature_url.match(/\/signatures\/(.+)$/);
-          if (!match) return item;
-          const storagePath = decodeURIComponent(match[1]);
+          const storagePath = match
+            ? decodeURIComponent(match[1])
+            : item.signature_url;
           const { data: signedUrlData } = await supabase.storage
             .from("signatures")
             .createSignedUrl(storagePath, 3600);

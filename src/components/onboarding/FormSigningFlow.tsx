@@ -66,14 +66,12 @@ const FormSigningFlow = ({ enrollmentId, templateId, onComplete }: Props) => {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("signatures").getPublicUrl(path);
-
     const { error } = await supabase.from("client_form_signatures" as any).insert({
       user_id: user!.id,
       form_id: form.id,
       enrollment_id: enrollmentId,
       full_name: fullName,
-      signature_url: urlData.publicUrl,
+      signature_url: path,
     } as any);
 
     setSaving(false);
