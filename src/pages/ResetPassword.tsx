@@ -15,6 +15,7 @@ const ResetPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [recoveryReady, setRecoveryReady] = useState<boolean | null>(null);
+  const [customResetEmail, setCustomResetEmail] = useState("");
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -22,9 +23,30 @@ const ResetPassword = () => {
   useEffect(() => {
     let active = true;
     const tokenHash = searchParams.get("token_hash");
+    const resetToken = searchParams.get("reset_token");
     const type = searchParams.get("type");
 
     const syncRecoveryState = async () => {
+      if (resetToken) {
+        const { data, error } = await supabase.functions.invoke("password-reset", {
+          body: {
+            action: "verify",
+            token: resetToken,
+          },
+        });
+
+        if (!active) return;
+
+        if (error || !data?.success) {
+          setRecoveryReady(false);
+          return;
+        }
+
+        setCustomResetEmail(data.email || "");
+        setRecoveryReady(true);
+        return;
+      }
+
       if (tokenHash && type === "recovery") {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -73,6 +95,7 @@ const ResetPassword = () => {
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    const resetToken = searchParams.get("reset_token");
     if (!recoveryReady) {
       toast({
         title: lang === "el" ? "Το link δεν είναι έγκυρο" : "This link is not valid",
@@ -92,6 +115,55 @@ const ResetPassword = () => {
       return;
     }
     setLoading(true);
+    if (resetToken) {
+      const { data, error } = await supabase.functions.invoke("password-reset", {
+        body: {
+          action: "complete",
+          token: resetToken,
+          password,
+        },
+      });
+
+      if (error || !data?.success || !data?.email) {
+        toast({
+          title: lang === "el" ? "Σφάλμα" : "Error",
+          description: error?.message || (lang === "el" ? "Δεν ήταν δυνατή η αλλαγή κωδικού." : "Password reset could not be completed."),
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const signInEmail = data.email || customResetEmail;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: signInEmail,
+        password,
+      });
+
+      if (signInError) {
+        toast({
+          title: lang === "el" ? "Ο κωδικός άλλαξε" : "Password updated",
+          description: lang === "el"
+            ? "Ο νέος κωδικός αποθηκεύτηκε. Συνδέσου με το email και τον νέο κωδικό."
+            : "Your new password has been saved. Sign in with your email and the new password.",
+        });
+        navigate("/auth", { replace: true });
+        setLoading(false);
+        return;
+      }
+
+      setSuccess(true);
+      toast({
+        title: lang === "el" ? "Ο κωδικός ενημερώθηκε!" : "Password updated!",
+        description: lang === "el"
+          ? "Μπαίνεις τώρα ξανά στην πλατφόρμα."
+          : "You are being taken back into the platform now.",
+      });
+      setTimeout(() => navigate("/home", { replace: true }), 1500);
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
       toast({ title: lang === "el" ? "Σφάλμα" : "Error", description: error.message, variant: "destructive" });

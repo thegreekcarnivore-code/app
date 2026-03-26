@@ -1,28 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as React from "npm:react@18.3.1";
-import { renderAsync } from "npm:@react-email/components@0.0.22";
-import { RecoveryEmail } from "../_shared/email-templates/recovery.tsx";
-import { buildAppUrl } from "../_shared/app-config.ts";
+import {
+  issuePasswordResetEmail,
+  preparePasswordResetUser,
+} from "../_shared/password-reset.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-const SENDER_DOMAIN = "thegreekcarnivore.com";
-
-function buildRecoveryUrl({
-  tokenHash,
-}: {
-  tokenHash: string;
-}) {
-  const params = new URLSearchParams({
-    token_hash: tokenHash,
-    type: "recovery",
-  });
-
-  return `${buildAppUrl("/reset-password")}?${params.toString()}`;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -88,113 +73,26 @@ Deno.serve(async (req) => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Look up every profile row for this email because migrated users may still
-    // have duplicate same-email rows and only one of them is auth-linked.
-    const { data: profileRows, error: profileLookupError } = await adminClient
-      .from("profiles")
-      .select("id, language, approved, created_at, last_login_at")
-      .eq("email", trimmedEmail);
-
-    if (profileLookupError) {
-      console.error("Profile lookup error:", profileLookupError);
-    }
-
-    let targetUser: any = null;
-    let targetProfile: any = null;
-
-    for (const profileRow of profileRows || []) {
-      const { data: authData, error: getUserError } = await adminClient.auth.admin.getUserById(profileRow.id);
-      if (!getUserError && authData?.user) {
-        targetUser = authData.user;
-        targetProfile = profileRow;
-        break;
-      }
-    }
-
-    // If we found the auth-linked user, confirm the email before generating the link.
-    if (targetUser && !targetUser.email_confirmed_at) {
-      console.log("Confirming unverified email for:", trimmedEmail);
-      await adminClient.auth.admin.updateUserById(targetUser.id, {
-        email_confirm: true,
-      });
-    }
-
-    // Generate recovery link (bypasses rate limits)
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
+    const resetTarget = await preparePasswordResetUser({
+      serviceClient: adminClient,
       email: trimmedEmail,
-      options: {
-        redirectTo: buildAppUrl("/reset-password"),
-      },
+      allowAccessGrant: true,
     });
 
-    if (linkError) {
-      console.error("Generate link error:", linkError);
+    if (!resetTarget.user) {
       return new Response(JSON.stringify({ error: "User not found or reset link could not be generated" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const tokenHash = linkData?.properties?.hashed_token;
-    const actionLink =
-      (typeof tokenHash === "string" && tokenHash
-        ? buildRecoveryUrl({ tokenHash })
-        : null) ||
-      linkData?.properties?.action_link ||
-      "";
-
-    if (!actionLink) {
-      return new Response(JSON.stringify({ error: "Failed to generate reset link" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Resolve language preference
-    const language =
-      targetUser?.user_metadata?.language ||
-      targetProfile?.language ||
-      profileRows?.[0]?.language ||
-      "el";
-
-    // Render branded recovery email
-    const html = await renderAsync(
-      React.createElement(RecoveryEmail, {
-        siteName: "The Greek Carnivore",
-        confirmationUrl: actionLink,
-        language,
-      })
-    );
-
-    const subject = language === "el" ? "Επαναφορα κωδικου" : "Reset your password";
-
-    // Send via Resend
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: "The Greek Carnivore <noreply@thegreekcarnivore.com>",
-        to: [trimmedEmail],
-        subject,
-        html,
-        headers: {
-          "X-Entity-Ref-ID": `admin-reset-${targetUser?.id || trimmedEmail}-${Date.now()}`,
-        },
-      }),
+    await issuePasswordResetEmail({
+      serviceClient: adminClient,
+      resendApiKey,
+      email: trimmedEmail,
+      language: resetTarget.language || "el",
+      user: resetTarget.user,
     });
-
-    if (!resendRes.ok) {
-      const errBody = await resendRes.text();
-      console.error("Resend API error:", resendRes.status, errBody);
-      return new Response(JSON.stringify({ error: "Failed to send reset email" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     console.log("Recovery email sent to:", trimmedEmail);
 

@@ -79,8 +79,11 @@ const Auth = () => {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.functions.invoke("password-reset", {
+      body: {
+        action: "request",
+        email,
+      },
     });
     if (error) {
       toast({ title: lang === "el" ? "Σφάλμα" : "Error", description: error.message, variant: "destructive" });
