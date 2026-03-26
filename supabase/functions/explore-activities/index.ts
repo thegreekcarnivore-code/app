@@ -238,7 +238,7 @@ async function verifyAndFilterRestaurants(
   if (restaurants.length === 0) return [];
 
   // Fetch Place Details for top candidates
-  const topRestaurants = restaurants.slice(0, 10);
+  const topRestaurants = restaurants.slice(0, 6);
   const detailsEntries = await Promise.all(
     topRestaurants.map(async (p) => {
       const details = await fetchPlaceDetails(p.place_id, apiKey);
@@ -391,6 +391,47 @@ const CATEGORY_TO_SEARCH: Record<string, { type: string; keyword?: string }[]> =
   businessEvents: [{ type: "establishment", keyword: "conference business event" }],
 };
 
+const LEGACY_CATEGORY_ALIASES: Record<string, string[]> = {
+  museum: ["museum"],
+  museums: ["museum"],
+  culture: ["museum"],
+  family: ["kidFriendly"],
+  kids: ["kidFriendly"],
+  children: ["kidFriendly"],
+  romance: ["forADate"],
+  romantic: ["forADate"],
+  date: ["forADate"],
+  outdoors: ["adventure"],
+  outdoor: ["adventure"],
+  nature: ["relaxing"],
+  liveMusic: ["musicCategory"],
+  concerts: ["musicCategory"],
+  business: ["businessEvents"],
+};
+
+function normalizeRequestedCategories(categories: unknown, vibe?: unknown, category?: unknown): string[] {
+  const raw: string[] = [];
+
+  if (Array.isArray(categories)) {
+    for (const value of categories) {
+      if (typeof value === "string" && value.trim()) raw.push(value.trim());
+    }
+  } else if (typeof categories === "string" && categories.trim()) {
+    raw.push(categories.trim());
+  }
+
+  if (raw.length === 0) {
+    if (typeof vibe === "string" && vibe.trim()) raw.push(vibe.trim());
+    else if (typeof category === "string" && category.trim()) raw.push(category.trim());
+  }
+
+  const normalized = raw
+    .flatMap((value) => LEGACY_CATEGORY_ALIASES[value] ?? [value])
+    .filter((value) => value in CATEGORY_TO_SEARCH);
+
+  return Array.from(new Set(normalized));
+}
+
 function getKidFriendlySearches(kidAges: string): { type: string; keyword?: string }[] {
   const ages = kidAges.split(/[,\s]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
   if (ages.length === 0) return CATEGORY_TO_SEARCH.kidFriendly;
@@ -482,7 +523,15 @@ serve(async (req) => {
     // Track user activity (non-blocking)
     trackUserActivity(userId);
 
-    const { latitude, longitude, categories, lang, dateFrom, dateTo, preferredLanguages, kidAges, priceTier, maxDistance, page = 1, previousNames = [] } = await req.json();
+    const body = await req.json();
+    const { latitude, longitude, categories, vibe, category, lang, dateFrom, dateTo, preferredLanguages, kidAges, priceTier, maxDistance, page = 1, previousNames = [] } = body;
+    const normalizedCategories = normalizeRequestedCategories(categories, vibe, category);
+    if (normalizedCategories.length === 0) {
+      return new Response(JSON.stringify({ error: "At least one valid activity category is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const radiusMeters = Math.min(Math.max((maxDistance || 15) * 1000, 1000), 50000);
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
@@ -492,7 +541,7 @@ serve(async (req) => {
 
     // 1. Fetch places for all selected categories
     const searchPromises: Promise<GooglePlace[]>[] = [];
-    for (const cat of (categories as string[])) {
+    for (const cat of normalizedCategories) {
       // Use age-adjusted searches for kidFriendly when kidAges is provided
       const searches = (cat === "kidFriendly" && kidAges)
         ? getKidFriendlySearches(kidAges)
@@ -539,7 +588,7 @@ serve(async (req) => {
       const expandedRadius = Math.min(radiusMeters * 1.5, 50000);
       console.log(`Activity fallback: expanding radius to ${expandedRadius}m`);
       const extraPromises: Promise<GooglePlace[]>[] = [];
-      for (const cat of (categories as string[])) {
+      for (const cat of normalizedCategories) {
         const searches = (cat === "kidFriendly" && kidAges)
           ? getKidFriendlySearches(kidAges)
           : (CATEGORY_TO_SEARCH[cat] || []);
@@ -577,7 +626,7 @@ serve(async (req) => {
     const weatherPromise = fetchWeather(latitude, longitude, dateFrom, dateTo);
 
     // 2. Fetch restaurants near the top activity locations (meat-focused + general)
-    const activityLocations = topPlaces.slice(0, 10).map(p => p.geometry.location);
+    const activityLocations = topPlaces.slice(0, 4).map(p => p.geometry.location);
     const restaurantPromises = activityLocations.flatMap(loc => [
       fetchNearbyPlaces(loc.lat, loc.lng, 800, GOOGLE_MAPS_API_KEY, "restaurant", "steak grill meat"),
       fetchNearbyPlaces(loc.lat, loc.lng, 800, GOOGLE_MAPS_API_KEY, "restaurant"),
@@ -649,7 +698,7 @@ serve(async (req) => {
     }
     // Fetch place details for restaurants to get website URLs
     const restDetailsEntries = await Promise.all(
-      allVerifiedRestaurants.slice(0, 20).map(async (r) => {
+      allVerifiedRestaurants.slice(0, 12).map(async (r) => {
         const details = await fetchPlaceDetails(r.place_id, GOOGLE_MAPS_API_KEY);
         return [r.place_id, details] as const;
       })
@@ -661,7 +710,7 @@ serve(async (req) => {
     // Scrape websites for menu content
     const restaurantWebsiteTexts = new Map<string, string>();
     await Promise.all(
-      allVerifiedRestaurants.map(async (r) => {
+      allVerifiedRestaurants.slice(0, 8).map(async (r) => {
         const details = restaurantDetailsMap.get(r.place_id);
         if (details?.website) {
           const text = await fetchWebsiteText(details.website);
@@ -672,7 +721,7 @@ serve(async (req) => {
     console.log(`Website scraping: fetched content for ${restaurantWebsiteTexts.size} restaurants`);
 
     // Scrape venue websites for kid-friendly age verification
-    const isKidFriendly = (categories as string[]).includes("kidFriendly");
+    const isKidFriendly = normalizedCategories.includes("kidFriendly");
     const activityWebsiteTexts = new Map<string, string>();
     if (isKidFriendly) {
       // Fetch place details for top activity venues to get website URLs
@@ -705,9 +754,9 @@ serve(async (req) => {
       }).join("\n");
     });
 
-    const hasEvents = (categories as string[]).some(c => ["comedy", "musicCategory", "opera", "businessEvents"].includes(c));
+    const hasEvents = normalizedCategories.some(c => ["comedy", "musicCategory", "opera", "businessEvents"].includes(c));
     const eventNote = hasEvents
-      ? `\nIMPORTANT: The user is also interested in LIVE EVENTS (${categories.filter((c: string) => ["comedy", "musicCategory", "opera", "businessEvents"].includes(c)).join(", ")}).
+      ? `\nIMPORTANT: The user is also interested in LIVE EVENTS (${normalizedCategories.filter((c: string) => ["comedy", "musicCategory", "opera", "businessEvents"].includes(c)).join(", ")}).
 Search your knowledge for events happening in this city between ${dateFrom} and ${dateTo}.
 ${preferredLanguages ? `Preferred languages for shows: ${preferredLanguages}` : ""}
 Mix live events with permanent attractions in your ranking. When an event's timing is uncertain, note it as "timing unconfirmed".`
@@ -766,7 +815,7 @@ ${venueWebsiteSection || "No venue website content available — use your knowle
 ${langInstruction}
 
 The user is located at GPS ${latitude}, ${longitude}, visiting from ${dateFrom} to ${dateTo}.
-They are interested in: ${(categories as string[]).join(", ")}.
+They are interested in: ${normalizedCategories.join(", ")}.
 This is page ${page} of results.${previousNote}${eventNote}
 
 ${weather.summary}

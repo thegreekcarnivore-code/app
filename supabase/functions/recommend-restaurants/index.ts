@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildSupabaseFunctionUrl } from "../_shared/app-config.ts";
+import { getOpenAIModel } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,10 @@ const VALID_SCOPES = new Set(["closest", "best_in_town"]);
 const VALID_MODES = new Set(["dine_in", "delivery", "shopping"]);
 
 const VALID_AIRPORT_SIDES = new Set(["before_security", "after_security"]);
+
+const OPENAI_MODEL_SMALL = getOpenAIModel("OPENAI_MODEL_SMALL", "gpt-4.1-mini");
+const OPENAI_MODEL_STANDARD = getOpenAIModel("OPENAI_MODEL_STANDARD", "gpt-4.1-mini");
+const OPENAI_MODEL_PREMIUM = getOpenAIModel("OPENAI_MODEL_PREMIUM", "gpt-4.1");
 
 function validateInput(body: unknown): {
   latitude: number;
@@ -213,6 +218,225 @@ interface GooglePlace {
   photos?: { photo_reference: string; height: number; width: number }[];
 }
 
+interface OverpassElement {
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+}
+
+function buildOsmAddress(tags: Record<string, string>) {
+  const parts = [
+    [tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(" ").trim(),
+    tags["addr:postcode"],
+    tags["addr:city"] || tags["addr:town"] || tags["addr:village"],
+    tags["addr:country"],
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+function buildOverpassSelectors(type: string) {
+  switch (type) {
+    case "restaurant":
+      return ['nwr["amenity"="restaurant"]'];
+    case "meal_takeaway":
+      return ['nwr["amenity"="fast_food"]', 'nwr["amenity"="restaurant"]["takeaway"="yes"]'];
+    case "meal_delivery":
+      return ['nwr["amenity"="restaurant"]["delivery"="yes"]', 'nwr["amenity"="fast_food"]["delivery"="yes"]'];
+    case "cafe":
+      return ['nwr["amenity"="cafe"]'];
+    case "supermarket":
+      return ['nwr["shop"="supermarket"]', 'nwr["shop"="convenience"]'];
+    case "grocery_or_supermarket":
+      return ['nwr["shop"="supermarket"]', 'nwr["shop"="greengrocer"]', 'nwr["shop"="convenience"]'];
+    case "store":
+      return ['nwr["shop"="butcher"]', 'nwr["shop"="supermarket"]', 'nwr["shop"="greengrocer"]', 'nwr["shop"="health_food"]', 'nwr["shop"="convenience"]'];
+    case "establishment":
+      return ['nwr["amenity"="restaurant"]', 'nwr["amenity"="cafe"]', 'nwr["amenity"="fast_food"]', 'nwr["shop"="supermarket"]', 'nwr["shop"="butcher"]'];
+    default:
+      return [`nwr["amenity"="${type}"]`];
+  }
+}
+
+function matchesKeyword(tags: Record<string, string>, keyword?: string) {
+  if (!keyword) return true;
+  const haystack = [
+    tags.name,
+    tags.brand,
+    tags.cuisine,
+    tags.shop,
+    tags.amenity,
+    tags.description,
+    tags["name:en"],
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return keyword
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => haystack.includes(term));
+}
+
+async function runOpenStreetMapFallback(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  type: string,
+  keyword?: string,
+): Promise<GooglePlace[]> {
+  const selectors = buildOverpassSelectors(type);
+  const fallbackRadius =
+    type === "restaurant" || type === "meal_takeaway" || type === "meal_delivery" || type === "cafe"
+      ? Math.min(radiusMeters, 1200)
+      : Math.min(radiusMeters, 5000);
+
+  const query = `[out:json][timeout:20];(${selectors
+    .map((selector) => `${selector}(around:${fallbackRadius},${lat},${lng});`)
+    .join("")});out center tags 40;`;
+
+  console.log(`Fallback OpenStreetMap search: type=${type}, keyword=${keyword || "none"}, radius=${fallbackRadius}m`);
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+  ];
+
+  let elements: OverpassElement[] = [];
+  let lastStatus: number | null = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: query,
+      });
+
+      if (!response.ok) {
+        lastStatus = response.status;
+        console.error(`OpenStreetMap Overpass error from ${endpoint}:`, response.status);
+        continue;
+      }
+
+      const data = await response.json();
+      elements = Array.isArray(data.elements) ? (data.elements as OverpassElement[]) : [];
+      if (elements.length > 0) break;
+    } catch (error) {
+      console.error(`OpenStreetMap Overpass request failed for ${endpoint}:`, error);
+    }
+  }
+
+  if (elements.length === 0 && lastStatus) {
+    throw new Error(`OpenStreetMap search failed (${lastStatus})`);
+  }
+  if (elements.length === 0) {
+    throw new Error("OpenStreetMap search failed");
+  }
+
+  return elements
+    .filter((element) => element.tags?.name)
+    .filter((element) => matchesKeyword(element.tags || {}, keyword))
+    .map((element) => {
+      const tags = element.tags || {};
+      const point = element.center || (element.lat != null && element.lon != null ? { lat: element.lat, lon: element.lon } : null);
+      if (!point) return null;
+
+      return {
+        name: tags.name,
+        vicinity: buildOsmAddress(tags) || tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "Nearby",
+        geometry: { location: { lat: point.lat, lng: point.lon } },
+        place_id: `osm:${type}:${element.id}`,
+        types: [tags.amenity || tags.shop || type],
+      } satisfies GooglePlace;
+    })
+    .filter((place): place is GooglePlace => Boolean(place));
+}
+
+async function safeOpenStreetMapSearch(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  type: string,
+  keyword?: string,
+): Promise<GooglePlace[]> {
+  try {
+    return await runOpenStreetMapFallback(lat, lng, radiusMeters, type, keyword);
+  } catch (error) {
+    console.error(`safeOpenStreetMapSearch failed for type=${type}, keyword=${keyword || "none"}:`, error);
+    return [];
+  }
+}
+
+async function runQuickOpenStreetMapMultiSearch(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  types: string[],
+): Promise<GooglePlace[]> {
+  const selectors = [...new Set(types.flatMap((type) => buildOverpassSelectors(type)))];
+  const query = `[out:json][timeout:8];(${selectors
+    .map((selector) => `${selector}(around:${radiusMeters},${lat},${lng});`)
+    .join("")});out center tags 30;`;
+
+  const endpoints = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: query,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const elements = Array.isArray(data.elements) ? (data.elements as OverpassElement[]) : [];
+      const seen = new Set<string>();
+      const places = elements
+        .filter((element) => element.tags?.name)
+        .map((element) => {
+          const tags = element.tags || {};
+          const point = element.center || (element.lat != null && element.lon != null ? { lat: element.lat, lon: element.lon } : null);
+          if (!point) return null;
+          const kind = tags.amenity || tags.shop || types[0] || "place";
+          return {
+            name: tags.name,
+            vicinity: buildOsmAddress(tags) || tags["addr:city"] || tags["addr:town"] || tags["addr:village"] || "Nearby",
+            geometry: { location: { lat: point.lat, lng: point.lon } },
+            place_id: `osm:${kind}:${element.id}`,
+            types: [kind],
+          } satisfies GooglePlace;
+        })
+        .filter((place): place is GooglePlace => Boolean(place))
+        .filter((place) => {
+          if (seen.has(place.place_id)) return false;
+          seen.add(place.place_id);
+          return true;
+        });
+
+      if (places.length > 0) {
+        return places;
+      }
+    } catch (error) {
+      console.error("runQuickOpenStreetMapMultiSearch failed:", error);
+    }
+  }
+
+  return [];
+}
+
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000; // meters
   const toRad = (d: number) => d * Math.PI / 180;
@@ -240,25 +464,98 @@ function estimateDrivingTime(meters: number): string {
 async function fetchNearbyPlaces(
   lat: number, lng: number, radiusMeters: number, apiKey: string, type: string, keyword?: string
 ): Promise<GooglePlace[]> {
-  const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
-  url.searchParams.set("location", `${lat},${lng}`);
-  url.searchParams.set("radius", String(radiusMeters));
-  url.searchParams.set("type", type);
-  url.searchParams.set("key", apiKey);
-  if (keyword) url.searchParams.set("keyword", keyword);
+  const runNearbyQuery = async (queryType: string, queryKeyword?: string) => {
+    const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
+    url.searchParams.set("location", `${lat},${lng}`);
+    url.searchParams.set("radius", String(radiusMeters));
+    url.searchParams.set("type", queryType);
+    url.searchParams.set("key", apiKey);
+    if (queryKeyword) url.searchParams.set("keyword", queryKeyword);
 
-  console.log(`Fetching Google Places: type=${type}, radius=${radiusMeters}m, keyword=${keyword || "none"}`);
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    console.error("Google Places API error:", response.status);
-    throw new Error("Failed to fetch nearby places from Google Places");
+    console.log(`Fetching Google Places: type=${queryType}, radius=${radiusMeters}m, keyword=${queryKeyword || "none"}`);
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      console.error("Google Places API error:", response.status);
+      throw new Error("Failed to fetch nearby places from Google Places");
+    }
+
+    const data = await response.json();
+    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+      console.error("Google Places API status:", data.status, data.error_message);
+      throw new Error(`Google Places error: ${data.status}`);
+    }
+
+    return (data.results || []) as GooglePlace[];
+  };
+
+  const buildAlternativeNearbyStrategies = () => {
+    const strategies: Array<{ type: string; keyword?: string }> = [];
+
+    if (type === "restaurant") {
+      strategies.push({ type: "establishment", keyword: keyword ? `${keyword} restaurant` : "restaurant steak grill" });
+      strategies.push({ type: "meal_takeaway", keyword: keyword });
+    } else if (type === "meal_delivery") {
+      strategies.push({ type: "establishment", keyword: keyword ? `${keyword} delivery` : "food delivery" });
+      strategies.push({ type: "meal_takeaway", keyword: "delivery takeaway" });
+    } else if (type === "meal_takeaway") {
+      strategies.push({ type: "establishment", keyword: keyword ? `${keyword} takeaway` : "takeaway restaurant" });
+    } else if (type === "supermarket" || type === "grocery_or_supermarket") {
+      strategies.push({ type: "store", keyword: keyword || "supermarket grocery market" });
+    } else if (type === "store") {
+      strategies.push({ type: "establishment", keyword: keyword || "market butcher grocery" });
+    }
+
+    return strategies;
+  };
+
+  const runTextSearchFallback = async () => {
+    const queryParts = [keyword, type.replaceAll("_", " ")].filter(Boolean);
+    const query = queryParts.join(" ").trim() || "restaurant";
+    const textUrl = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+    textUrl.searchParams.set("query", query);
+    textUrl.searchParams.set("location", `${lat},${lng}`);
+    textUrl.searchParams.set("radius", String(radiusMeters));
+    textUrl.searchParams.set("key", apiKey);
+
+    console.log(`Fallback Google Text Search: query="${query}", radius=${radiusMeters}m`);
+    const textResponse = await fetch(textUrl.toString());
+    if (!textResponse.ok) {
+      console.error("Google Text Search API error:", textResponse.status);
+      return await runOpenStreetMapFallback(lat, lng, radiusMeters, type, keyword);
+    }
+
+    const textData = await textResponse.json();
+    if (textData.status !== "OK" && textData.status !== "ZERO_RESULTS") {
+      console.error("Google Text Search status:", textData.status, textData.error_message);
+      return await runOpenStreetMapFallback(lat, lng, radiusMeters, type, keyword);
+    }
+
+    return (textData.results || []) as GooglePlace[];
+  };
+
+  try {
+    return await runNearbyQuery(type, keyword);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("REQUEST_DENIED") && !message.includes("INVALID_REQUEST")) {
+      throw error;
+    }
+
+    for (const strategy of buildAlternativeNearbyStrategies()) {
+      try {
+        console.log(`Retrying Google Nearby Search with fallback type=${strategy.type}, keyword=${strategy.keyword || "none"}`);
+        const fallbackResults = await runNearbyQuery(strategy.type, strategy.keyword);
+        if (fallbackResults.length > 0) return fallbackResults;
+      } catch (fallbackError) {
+        console.error("Fallback nearby search failed:", fallbackError);
+      }
+    }
+
+    if (message.includes("REQUEST_DENIED") || message.includes("INVALID_REQUEST")) {
+      return await runTextSearchFallback();
+    }
+    throw error;
   }
-  const data = await response.json();
-  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-    console.error("Google Places API status:", data.status, data.error_message);
-    throw new Error(`Google Places error: ${data.status}`);
-  }
-  return (data.results || []) as GooglePlace[];
 }
 
 async function fetchNearbyRestaurants(
@@ -306,6 +603,9 @@ async function detectAirport(lat: number, lng: number, apiKey: string): Promise<
 
 function buildGoogleMapsUrl(place: GooglePlace): string {
   const q = encodeURIComponent(`${place.name}, ${place.vicinity}`);
+  if (place.place_id.startsWith("osm:")) {
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  }
   return `https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${place.place_id}`;
 }
 
@@ -724,6 +1024,7 @@ async function fetchWebsiteAndMenuText(url: string): Promise<WebsiteScrapResult>
 
 async function fetchPlaceDetails(placeId: string, apiKey: string): Promise<PlaceDetails | null> {
   try {
+    if (placeId.startsWith("osm:")) return null;
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=opening_hours,website,business_status&key=${apiKey}`;
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -759,7 +1060,7 @@ async function cleanMenuWithAI(rawMenuText: string, restaurantName: string, apiK
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: OPENAI_MODEL_STANDARD,
         messages: [
           {
             role: "system",
@@ -796,7 +1097,7 @@ async function fetchMenuViaGPTKnowledge(restaurantName: string, city: string, ap
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: OPENAI_MODEL_STANDARD,
         messages: [
           {
             role: "system",
@@ -845,7 +1146,7 @@ async function verifyUnknownPlacesWithAI(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: OPENAI_MODEL_STANDARD,
         messages: [
           { role: "system", content: "Classify each restaurant's operational status. Use the provided tool." },
           { role: "user", content: `Status check:\n\n${numberedList}` },
@@ -1065,6 +1366,171 @@ PRICE TIER BACKFILL: If fewer than 3 qualify, backfill from next lower tier. Lab
 CRITICAL: ONLY recommend from the VERIFIED LIST below. If none deliver, say so and suggest checking Wolt/Uber Eats directly.`
 }
 
+function estimatePriceLabel(priceLevel: number | undefined, lang: string): string {
+  if (lang === "el") {
+    switch (priceLevel) {
+      case 0: return "Πολύ οικονομικό";
+      case 1: return "Οικονομική επιλογή";
+      case 2: return "Μεσαία τιμή";
+      case 3: return "Premium επιλογή";
+      case 4: return "Υψηλή τιμή";
+      default: return "Δες live τιμές";
+    }
+  }
+
+  switch (priceLevel) {
+    case 0: return "Very budget-friendly";
+    case 1: return "Value range";
+    case 2: return "Mid-range";
+    case 3: return "Premium range";
+    case 4: return "High-end";
+    default: return "Check live pricing";
+  }
+}
+
+function inferShopLabel(place: GooglePlace, lang: string): string {
+  const types = place.types || [];
+  if (types.includes("butcher") || place.name.toLowerCase().includes("butcher")) {
+    return lang === "el" ? "Κρεοπωλείο" : "Butcher";
+  }
+  if (types.includes("supermarket") || types.includes("grocery_or_supermarket")) {
+    return lang === "el" ? "Σούπερ μάρκετ" : "Supermarket";
+  }
+  if (types.includes("convenience_store")) {
+    return lang === "el" ? "Mini market" : "Convenience store";
+  }
+  return lang === "el" ? "Κατάστημα τροφίμων" : "Food shop";
+}
+
+function buildFastDeliveryMealOptions(mealTime: string | undefined, lang: string) {
+  if (lang === "el") {
+    if (mealTime === "breakfast") {
+      return [
+        { dish: "Πιάτο με αυγά, μπέικον ή ομελέτα χωρίς ψωμί", isRecommended: true, lowCarbTip: "Ζήτησε χωρίς ψωμί, πατάτες ή γλυκές sauces." },
+        { dish: "Γιαούρτι πλήρες ή τυριά μαζί με αυγά", isRecommended: false, lowCarbTip: "Κράτα μόνο πλήρη γαλακτοκομικά και απέφυγε granola ή φρούτα." },
+      ];
+    }
+    return [
+      { dish: "Πιάτο με ψητό κρέας ή burger χωρίς ψωμί", isRecommended: true, lowCarbTip: "Χωρίς ψωμί, πατάτες, ρύζι ή γλυκές sauces." },
+      { dish: "Κοτόπουλο σούβλας / kebab box χωρίς πίτα", isRecommended: false, lowCarbTip: "Ζήτησε έξτρα κρέας και κράτα σαλάτα ή τυρί αντί για άμυλο." },
+    ];
+  }
+
+  if (mealTime === "breakfast") {
+    return [
+      { dish: "Eggs, bacon, or an omelette without bread", isRecommended: true, lowCarbTip: "Skip bread, potatoes, pastries, and sweet sauces." },
+      { dish: "Full-fat yogurt or cheese with eggs", isRecommended: false, lowCarbTip: "Keep it full-fat and avoid granola, fruit, or honey." },
+    ];
+  }
+  return [
+    { dish: "Grilled meat plate or bunless burger", isRecommended: true, lowCarbTip: "Skip bread, fries, rice, and sweet sauces." },
+    { dish: "Rotisserie chicken or kebab box without bread", isRecommended: false, lowCarbTip: "Ask for extra meat and keep salad or cheese instead of starch." },
+  ];
+}
+
+function buildFastShoppingMealOptions(place: GooglePlace, lang: string) {
+  const label = inferShopLabel(place, lang);
+  if (label === "Κρεοπωλείο" || label === "Butcher") {
+    return lang === "el"
+      ? [
+          { dish: "Λιπαρά κομμάτια μοσχαριού ή αρνιού", isRecommended: true, lowCarbTip: "Ζήτησε τα πιο λιπαρά cuts και κράτα κόκαλα ή λίπος για έξτρα γεύση." },
+          { dish: "Κιμάς με υψηλότερο λίπος και κόκαλα για ζωμό", isRecommended: false, lowCarbTip: "Προτίμησε πιο πλούσιο λίπος αντί για πολύ άπαχες επιλογές." },
+        ]
+      : [
+          { dish: "Fatty beef or lamb cuts", isRecommended: true, lowCarbTip: "Ask for the fattiest cuts and keep bones or trimmings for extra flavor." },
+          { dish: "Higher-fat minced meat and bones for broth", isRecommended: false, lowCarbTip: "Prefer richer fat content over very lean options." },
+        ];
+  }
+
+  return lang === "el"
+    ? [
+        { dish: "Πάγκος κρέατος, αυγά και πλήρη γαλακτοκομικά", isRecommended: true, lowCarbTip: "Πήγαινε πρώτα σε κρέας, αυγά, βούτυρο και πλήρη τυριά." },
+        { dish: "Βούτυρο, τυριά πλήρη και απλά υλικά χωρίς πρόσθετα", isRecommended: false, lowCarbTip: "Απέφυγε έτοιμα σνακ, δημητριακά, ψωμιά και seed oils." },
+      ]
+    : [
+        { dish: "Meat counter, eggs, and full-fat dairy", isRecommended: true, lowCarbTip: "Start with meat, eggs, butter, and full-fat cheeses." },
+        { dish: "Butter, full-fat cheeses, and simple whole ingredients", isRecommended: false, lowCarbTip: "Skip snack aisles, cereals, breads, and seed oils." },
+      ];
+}
+
+function buildFastRecommendationResponse(params: {
+  mode: "delivery" | "shopping";
+  lang: string;
+  mealTime?: string;
+  places: GooglePlace[];
+  latitude: number;
+  longitude: number;
+  detailsMap: Map<string, PlaceDetails>;
+}) {
+  const { mode, lang, mealTime, places, latitude, longitude, detailsMap } = params;
+  const locationName = places[0]?.vicinity?.split(",")[0]?.trim() || (lang === "el" ? "την περιοχή σου" : "your area");
+  const restaurants = places.slice(0, 4).map((place) => {
+    const dist = haversineDistance(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng);
+    const details = detailsMap.get(place.place_id);
+    const isDelivery = mode === "delivery";
+
+    return {
+      name: place.name,
+      cuisine: isDelivery ? (lang === "el" ? "Επιλογή delivery" : "Delivery option") : inferShopLabel(place, lang),
+      distance: formatDistance(dist),
+      walkingTime: estimateWalkingTime(dist),
+      drivingTime: estimateDrivingTime(dist),
+      rating: place.rating ?? 0,
+      reviewCount: place.user_ratings_total ?? 0,
+      averagePrice: estimatePriceLabel(place.price_level, lang),
+      whyThisPlace: isDelivery
+        ? (lang === "el"
+            ? "Είναι κοντά σου και αξίζει να το τσεκάρεις άμεσα σε Wolt, Uber Eats, Bolt Food ή στο site του καταστήματος."
+            : "It is close to you and worth checking right away in Wolt, Uber Eats, Bolt Food, or on the business website.")
+        : (lang === "el"
+            ? "Είναι πρακτική επιλογή κοντά σου για να στηρίξεις τα βασικά ψώνια της εβδομάδας."
+            : "It is a practical nearby option to cover the core shopping for the week."),
+      mealOptions: isDelivery ? buildFastDeliveryMealOptions(mealTime, lang) : buildFastShoppingMealOptions(place, lang),
+      orderingPhrase: isDelivery
+        ? (lang === "el"
+            ? "Άνοιξε την εφαρμογή delivery ή το site τους και επιβεβαίωσε το live menu πριν παραγγείλεις."
+            : "Open the delivery app or their website and confirm the live menu before ordering.")
+        : (lang === "el"
+            ? "Κάνε πρώτα μια γρήγορη βόλτα σε κρέας, αυγά, βούτυρο και πλήρη γαλακτοκομικά."
+            : "Do a quick pass through meat, eggs, butter, and full-fat dairy first."),
+      kitchenHours: details?.weekday_text ? getTodayHours(details.weekday_text) : (lang === "el" ? "Δες live ωράριο" : "Check live hours"),
+      address: place.vicinity,
+      verificationNote: isDelivery
+        ? (lang === "el"
+            ? "Επιβεβαίωσε live τη διαθεσιμότητα delivery στην εφαρμογή παραγγελίας."
+            : "Confirm live delivery availability in the ordering app.")
+        : (lang === "el"
+            ? "Επιβεβαίωσε live ωράριο και διαθεσιμότητα πριν ξεκινήσεις."
+            : "Confirm live hours and availability before you go."),
+      deliveryTime: isDelivery ? `${Math.max(20, Math.round(dist / 250) + 15)}-${Math.max(30, Math.round(dist / 250) + 25)} min` : undefined,
+      orderingMethod: isDelivery
+        ? (lang === "el" ? "Wolt / Uber Eats / Bolt Food / site καταστήματος" : "Wolt / Uber Eats / Bolt Food / business website")
+        : undefined,
+      googleMapsUrl: buildGoogleMapsUrl(place),
+      appleMapsUrl: buildAppleMapsUrl(place),
+    };
+  });
+
+  return {
+    summary: mode === "delivery"
+      ? (lang === "el"
+          ? `Αυτές είναι οι πιο χρήσιμες κοντινές επιλογές delivery γύρω από ${locationName}. Άνοιξε το delivery app ή το site τους και προχώρα με την πιο καθαρή λύση.`
+          : `These are the most useful nearby delivery options around ${locationName}. Open the delivery app or their website and go with the cleanest fit.`)
+      : (lang === "el"
+          ? `Αυτά είναι τα πιο χρήσιμα κοντινά σημεία για ψώνια γύρω από ${locationName}. Κράτα το καλάθι σου απλό και χτισμένο γύρω από βασικά carnivore τρόφιμα.`
+          : `These are the most useful nearby shopping spots around ${locationName}. Keep the basket simple and built around core carnivore foods.`),
+    locationName,
+    restaurants,
+    whatToAvoid: mode === "delivery"
+      ? (lang === "el"
+          ? "Απέφυγε ψωμιά, πατάτες, ρύζι, τηγανητά σε seed oils και γλυκές sauces. Επιβεβαίωσε πάντα το live menu πριν ολοκληρώσεις την παραγγελία."
+          : "Avoid breads, fries, rice, seed-oil fried sides, and sweet sauces. Always confirm the live menu before completing the order.")
+      : (lang === "el"
+          ? "Απέφυγε έτοιμα σνακ, δημητριακά, ψωμιά, ζαχαρούχα προϊόντα και seed oils. Κράτα τα ψώνια σου σε απλά ζωικά τρόφιμα και πλήρη λιπαρά."
+          : "Avoid snack aisles, cereals, breads, sugary products, and seed oils. Keep the shopping focused on simple animal foods and full-fat staples."),
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -1100,6 +1566,9 @@ serve(async (req) => {
     const isDelivery = mode === "delivery";
     const isShopping = mode === "shopping";
     const isBestInTown = scope === "best_in_town";
+    const isFastRecommendationMode = isDelivery || isShopping;
+    const shouldRunDeepMenuPipeline = !isFastRecommendationMode;
+    const finalRecommendationModel = isFastRecommendationMode ? OPENAI_MODEL_STANDARD : OPENAI_MODEL_PREMIUM;
     
     // Use maxDistance if provided, otherwise use defaults
     let radius: number;
@@ -1128,11 +1597,17 @@ serve(async (req) => {
 
     if (isShopping) {
       // For shopping, search supermarkets, butchers, and markets
-      const [supermarketResults, butcherResults, marketResults] = await Promise.all([
-        fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "supermarket"),
-        fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "store", "butcher meat"),
-        fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "grocery_or_supermarket", "organic market"),
-      ]);
+      const [supermarketResults, butcherResults, marketResults] = isFastRecommendationMode
+        ? await Promise.all([
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 5000), ["supermarket"]),
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 5000), ["store"]),
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 5000), ["grocery_or_supermarket"]),
+          ])
+        : await Promise.all([
+            fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "supermarket"),
+            fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "store", "butcher meat"),
+            fetchNearbyPlaces(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "grocery_or_supermarket", "organic market"),
+          ]);
       const seen = new Set<string>();
       for (const p of [...butcherResults, ...supermarketResults, ...marketResults]) {
         if (!seen.has(p.place_id)) {
@@ -1142,12 +1617,18 @@ serve(async (req) => {
       }
       console.log(`Shopping search: ${supermarketResults.length} supermarkets, ${butcherResults.length} butchers, ${marketResults.length} markets → ${places.length} unique`);
     } else if (isDelivery) {
-      // For delivery, run multiple searches to find delivery-capable businesses
-      const [deliveryResults, mealPrepResults, cateringResults] = await Promise.all([
-        fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "food delivery"),
-        fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "meal prep delivery"),
-        fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "catering delivery"),
-      ]);
+      // For delivery, use a lightweight search path to avoid timing out on denied Google Places branches.
+      const [deliveryResults, mealPrepResults, cateringResults] = isFastRecommendationMode
+        ? await Promise.all([
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 2500), ["meal_delivery"]),
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 2500), ["meal_takeaway"]),
+            runQuickOpenStreetMapMultiSearch(latitude, longitude, Math.min(radius, 2500), ["restaurant"]),
+          ])
+        : await Promise.all([
+            fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "food delivery"),
+            fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "meal prep delivery"),
+            fetchNearbyRestaurants(latitude, longitude, radius, GOOGLE_MAPS_API_KEY, "catering delivery"),
+          ]);
 
       const seen = new Set<string>();
       for (const p of [...deliveryResults, ...mealPrepResults, ...cateringResults]) {
@@ -1400,77 +1881,9 @@ serve(async (req) => {
       placesToSend = places.slice(0, 15);
     }
 
-    // For delivery mode, run an AI pre-screening step to filter for actual delivery + meat-based options
-    if (isDelivery && placesToSend.length > 0) {
-      const prescreenList = placesToSend.map((p, i) => {
-        return `${i + 1}. "${p.name}" — ${p.vicinity} (Rating: ${p.rating ?? "N/A"}, ${p.user_ratings_total ?? 0} reviews, Price: ${p.price_level != null ? "$".repeat(p.price_level) : "unknown"})`;
-      }).join("\n");
-
-      const prescreenResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "Filter restaurants that BOTH deliver (own delivery or Wolt/Uber Eats/Bolt Food/Glovo) AND serve high-fat, high-protein food (fatty meats, steaks, grilled items, butter-rich dishes). Exclude if unsure about delivery. Use the provided tool." },
-            { role: "user", content: `Near GPS ${latitude}, ${longitude}, which deliver AND serve meat/protein:\n\n${prescreenList}` },
-          ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "filter_restaurants",
-              description: "Indices of restaurants that deliver AND serve meat-based food",
-              parameters: {
-                type: "object",
-                properties: {
-                  selected: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        index: { type: "number" },
-                        deliveryMethod: { type: "string" },
-                        meatScore: { type: "number" },
-                        reason: { type: "string" },
-                      },
-                      required: ["index", "deliveryMethod", "meatScore", "reason"],
-                    },
-                  },
-                },
-                required: ["selected"],
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "filter_restaurants" } },
-        }),
-      });
-
-      if (prescreenResponse.ok) {
-        const prescreenData = await prescreenResponse.json();
-        const prescreenTool = prescreenData.choices?.[0]?.message?.tool_calls?.[0];
-        if (prescreenTool) {
-          try {
-            const filtered = JSON.parse(prescreenTool.function.arguments);
-            if (filtered.selected && filtered.selected.length > 0) {
-              const sorted = filtered.selected.sort((a: any, b: any) => (b.meatScore ?? 0) - (a.meatScore ?? 0));
-              const filteredPlaces = sorted
-                .map((s: any) => placesToSend[s.index - 1])
-                .filter(Boolean);
-              if (filteredPlaces.length > 0) {
-                console.log(`AI pre-screen: ${placesToSend.length} → ${filteredPlaces.length} delivery+meat-based places`);
-                placesToSend = filteredPlaces;
-              }
-            }
-          } catch (e) {
-            console.error("Pre-screen parse error:", e);
-          }
-        }
-      } else {
-        console.error("Pre-screen API error:", prescreenResponse.status);
-      }
+    if (isFastRecommendationMode && placesToSend.length > 8) {
+      console.log(`Fast mode: trimming candidates ${placesToSend.length} -> 8`);
+      placesToSend = placesToSend.slice(0, 8);
     }
 
     // Fetch real opening hours for all selected places in parallel (post-loop)
@@ -1524,9 +1937,34 @@ serve(async (req) => {
       }
     }
 
+    if (isFastRecommendationMode && placesToSend.length > 0) {
+      const nearbySearchCount = isShopping ? 3 : 3;
+      const placeDetailsCount = detailsMap.size;
+
+      logApiUsage(userId, "recommend-restaurants", "google_maps", "geocoding", 0.0005);
+      logApiUsage(userId, "recommend-restaurants", "google_maps", "nearby_search", 0.0032 * nearbySearchCount, nearbySearchCount);
+      if (placeDetailsCount > 0) {
+        logApiUsage(userId, "recommend-restaurants", "google_maps", "place_details", 0.0017 * placeDetailsCount, placeDetailsCount);
+      }
+
+      const fastRecommendations = buildFastRecommendationResponse({
+        mode: isDelivery ? "delivery" : "shopping",
+        lang,
+        mealTime,
+        places: placesToSend,
+        latitude,
+        longitude,
+        detailsMap,
+      });
+
+      return new Response(JSON.stringify(fastRecommendations), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // AI verification for places where Google returned no details
     const unverifiedPlaces = placesToSend.filter(p => !detailsMap.has(p.place_id));
-    if (unverifiedPlaces.length > 0) {
+    if (unverifiedPlaces.length > 0 && !isFastRecommendationMode) {
       const aiExcludeIds = await verifyUnknownPlacesWithAI(unverifiedPlaces, OPENAI_API_KEY);
       if (aiExcludeIds.size > 0) {
         const beforeAI = placesToSend.length;
@@ -1535,64 +1973,65 @@ serve(async (req) => {
       }
     }
 
-    // Fetch website text for menu verification (with improved menu discovery pipeline)
     const menuTexts = new Map<string, string>();
     const generalTexts = new Map<string, string>();
     const menuPageUrls = new Map<string, string>();
-    
-    // Phase 1: Scrape websites with separated menu/general content
-    await Promise.all(
-      placesToSend.map(async (p) => {
-        const details = detailsMap.get(p.place_id);
-        if (details?.website) {
-          const result = await fetchWebsiteAndMenuText(details.website);
-          if (result.menuText.length > 100) menuTexts.set(p.place_id, result.menuText);
-          if (result.generalText.length > 50) generalTexts.set(p.place_id, result.generalText);
-          if (result.menuPageUrl) menuPageUrls.set(p.place_id, result.menuPageUrl);
+    if (shouldRunDeepMenuPipeline) {
+      // Fetch website text for menu verification (with improved menu discovery pipeline)
+      await Promise.all(
+        placesToSend.map(async (p) => {
+          const details = detailsMap.get(p.place_id);
+          if (details?.website) {
+            const result = await fetchWebsiteAndMenuText(details.website);
+            if (result.menuText.length > 100) menuTexts.set(p.place_id, result.menuText);
+            if (result.generalText.length > 50) generalTexts.set(p.place_id, result.generalText);
+            if (result.menuPageUrl) menuPageUrls.set(p.place_id, result.menuPageUrl);
+          }
+        })
+      );
+      console.log(`Website scraping: ${menuTexts.size} menus, ${generalTexts.size} general, ${menuPageUrls.size} menu URLs from ${placesToSend.length} places`);
+
+      // Phase 2: AI menu cleanup for restaurants with menu content
+      const menuCleanupPromises: Promise<void>[] = [];
+      for (const [placeId, rawMenu] of menuTexts) {
+        if (rawMenu.length > 500) {
+          const place = placesToSend.find(p => p.place_id === placeId);
+          if (place) {
+            menuCleanupPromises.push(
+              cleanMenuWithAI(rawMenu, place.name, OPENAI_API_KEY).then(cleaned => {
+                menuTexts.set(placeId, cleaned);
+              })
+            );
+          }
         }
-      })
-    );
-    console.log(`Website scraping: ${menuTexts.size} menus, ${generalTexts.size} general, ${menuPageUrls.size} menu URLs from ${placesToSend.length} places`);
-    
-    // Phase 2: AI menu cleanup for restaurants with menu content
-    const menuCleanupPromises: Promise<void>[] = [];
-    for (const [placeId, rawMenu] of menuTexts) {
-      if (rawMenu.length > 500) {
-        const place = placesToSend.find(p => p.place_id === placeId);
-        if (place) {
+      }
+
+      // Phase 3: GPT knowledge fallback for restaurants without menu content
+      const cityName = placesToSend[0]?.vicinity?.split(",").pop()?.trim() || "unknown city";
+      for (const p of placesToSend) {
+        if (!menuTexts.has(p.place_id) || (menuTexts.get(p.place_id)?.length ?? 0) < 200) {
           menuCleanupPromises.push(
-            cleanMenuWithAI(rawMenu, place.name, OPENAI_API_KEY).then(cleaned => {
-              menuTexts.set(placeId, cleaned);
+            fetchMenuViaGPTKnowledge(p.name, cityName, OPENAI_API_KEY).then(fallbackMenu => {
+              if (fallbackMenu) {
+                const existing = menuTexts.get(p.place_id) || "";
+                menuTexts.set(p.place_id, existing + fallbackMenu);
+              }
             })
           );
         }
       }
+
+      await Promise.all(menuCleanupPromises);
+      console.log(`Menu pipeline complete: ${menuTexts.size} restaurants with menu data`);
+
+      // Log AI menu processing costs
+      const menuCleanupCount = [...menuTexts.values()].filter(t => t.length > 500).length;
+      const fallbackCount = [...menuTexts.values()].filter(t => t.includes("GPT KNOWLEDGE")).length;
+      if (menuCleanupCount > 0) logApiUsage(userId, "recommend-restaurants", "openai", OPENAI_MODEL_STANDARD, 0.0002 * menuCleanupCount, menuCleanupCount);
+      if (fallbackCount > 0) logApiUsage(userId, "recommend-restaurants", "openai", OPENAI_MODEL_STANDARD, 0.0001 * fallbackCount, fallbackCount);
+    } else {
+      console.log(`Fast mode: skipping deep menu pipeline for ${mode}`);
     }
-    
-    // Phase 3: GPT knowledge fallback for restaurants without menu content
-    // Resolve city name from first place's vicinity
-    const cityName = placesToSend[0]?.vicinity?.split(",").pop()?.trim() || "unknown city";
-    for (const p of placesToSend) {
-      if (!menuTexts.has(p.place_id) || (menuTexts.get(p.place_id)?.length ?? 0) < 200) {
-        menuCleanupPromises.push(
-          fetchMenuViaGPTKnowledge(p.name, cityName, OPENAI_API_KEY).then(fallbackMenu => {
-            if (fallbackMenu) {
-              const existing = menuTexts.get(p.place_id) || "";
-              menuTexts.set(p.place_id, existing + fallbackMenu);
-            }
-          })
-        );
-      }
-    }
-    
-    await Promise.all(menuCleanupPromises);
-    console.log(`Menu pipeline complete: ${menuTexts.size} restaurants with menu data`);
-    
-    // Log AI menu processing costs
-    const menuCleanupCount = [...menuTexts.values()].filter(t => t.length > 500).length;
-    const fallbackCount = [...menuTexts.values()].filter(t => t.includes("GPT KNOWLEDGE")).length;
-    if (menuCleanupCount > 0) logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o-mini", 0.0002 * menuCleanupCount, menuCleanupCount);
-    if (fallbackCount > 0) logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o-mini", 0.0001 * fallbackCount, fallbackCount);
 
     const placesListText = placesToPromptList(placesToSend, latitude, longitude, detailsMap, menuTexts, generalTexts, menuPageUrls);
 
@@ -2015,7 +2454,7 @@ ${contextNote}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: finalRecommendationModel,
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -2030,13 +2469,14 @@ ${contextNote}`;
 
     if (!response.ok) {
       const status = response.status;
-      console.error("OpenAI API error:", status);
+      const errorBody = await response.text();
+      console.error("OpenAI API error:", status, errorBody);
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Service busy. Please try again in a moment." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error("Service temporarily unavailable");
+      throw new Error(`OpenAI request failed (${status}): ${errorBody.slice(0, 500)}`);
     }
 
     const data = await response.json();
@@ -2141,7 +2581,6 @@ ${contextNote}`;
       // Use placesToSend if available, otherwise fall back to original places array
       const fallbackPool = placesToSend.length > 0 ? placesToSend : places;
       if (verified.length === 0 && fallbackPool.length > 0) {
-        console.info(`GPT went entirely off-list. Re-running with forced picks from ${fallbackPool.length} verified places.`);
         let topPlaces = [...fallbackPool]
           .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
           .slice(0, 6);
@@ -2150,8 +2589,10 @@ ${contextNote}`;
           topPlaces = topPlaces.filter(p => !isHotelVenue(p));
         }
 
-        const forcedList = placesToPromptList(topPlaces, latitude, longitude, detailsMap, menuTexts, generalTexts, menuPageUrls);
-        const forcedPrompt = `You are an elite food concierge. Here are ${topPlaces.length} venues confirmed OPEN right now near GPS ${latitude}, ${longitude}. Recommend ALL of them with full concierge details (meal options, ordering phrase in local language, kitchen hours, why this place, average price per person).
+        if (!isFastRecommendationMode) {
+          console.info(`GPT went entirely off-list. Re-running with forced picks from ${fallbackPool.length} verified places.`);
+          const forcedList = placesToPromptList(topPlaces, latitude, longitude, detailsMap, menuTexts, generalTexts, menuPageUrls);
+          const forcedPrompt = `You are an elite food concierge. Here are ${topPlaces.length} venues confirmed OPEN right now near GPS ${latitude}, ${longitude}. Recommend ALL of them with full concierge details (meal options, ordering phrase in local language, kitchen hours, why this place, average price per person).
 ${languageInstruction}
 CRITICAL NAME RULE: The "name" field in your response MUST be the EXACT name shown in the list below. Do NOT rename venues. If a venue is a hotel with a restaurant inside, use the HOTEL name exactly as listed (e.g. "Le Richemond" not "Le Jardin", "Beau-Rivage Genève" not "Chat-Botté"). Mention the internal restaurant name in "whyThisPlace" instead (e.g. "Home to Le Jardin restaurant").
 
@@ -2164,79 +2605,80 @@ Focus on meat-based, high-protein options. Tone: calm, confident, like a private
 ${menuVerificationInstruction}
 ${lowCarbTipInstruction}`;
 
-        try {
-          const retryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${OPENAI_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "gpt-4o",
-              messages: [
-                { role: "system", content: forcedPrompt },
-                { role: "user", content: "Give me your concierge recommendations for ALL these restaurants." },
-              ],
-              tools: [toolSchema],
-              tool_choice: { type: "function", function: { name: "provide_recommendations" } },
-            }),
-          });
+          try {
+            const retryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENAI_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: finalRecommendationModel,
+                messages: [
+                  { role: "system", content: forcedPrompt },
+                  { role: "user", content: "Give me your concierge recommendations for ALL these restaurants." },
+                ],
+                tools: [toolSchema],
+                tool_choice: { type: "function", function: { name: "provide_recommendations" } },
+              }),
+            });
 
-          if (retryResponse.ok) {
-            const retryData = await retryResponse.json();
-            const retryTool = retryData.choices?.[0]?.message?.tool_calls?.[0];
-            if (retryTool) {
-              const retryRecs = JSON.parse(retryTool.function.arguments);
-              if (retryRecs.restaurants?.length > 0) {
-                for (const r of retryRecs.restaurants) {
-                  const lower = r.name.toLowerCase();
-                  let mp = (r.placeId && placeById.get(r.placeId))
-                    || placeByName.get(lower)
-                    || (() => { for (const [pn, p] of placeByName) { if (lower.includes(pn) || pn.includes(lower)) return p; } return undefined; })();
-                  // Website-text fallback: if GPT used internal restaurant name, match via website content
-                  if (!mp) {
-                    for (const [pid, text] of menuTexts) {
-                      if (text.toLowerCase().includes(lower)) {
-                        mp = placeById.get(pid);
-                        if (mp) { console.log(`Retry: matched "${r.name}" via website text of "${mp.name}"`); break; }
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              const retryTool = retryData.choices?.[0]?.message?.tool_calls?.[0];
+              if (retryTool) {
+                const retryRecs = JSON.parse(retryTool.function.arguments);
+                if (retryRecs.restaurants?.length > 0) {
+                  for (const r of retryRecs.restaurants) {
+                    const lower = r.name.toLowerCase();
+                    let mp = (r.placeId && placeById.get(r.placeId))
+                      || placeByName.get(lower)
+                      || (() => { for (const [pn, p] of placeByName) { if (lower.includes(pn) || pn.includes(lower)) return p; } return undefined; })();
+                    // Website-text fallback: if GPT used internal restaurant name, match via website content
+                    if (!mp) {
+                      for (const [pid, text] of menuTexts) {
+                        if (text.toLowerCase().includes(lower)) {
+                          mp = placeById.get(pid);
+                          if (mp) { console.log(`Retry: matched "${r.name}" via website text of "${mp.name}"`); break; }
+                        }
                       }
                     }
+                    if (mp) {
+                      // Keep GPT's restaurant name (may differ from hotel name) for better UX
+                      r.googleMapsUrl = buildGoogleMapsUrl(mp);
+                      r.appleMapsUrl = buildAppleMapsUrl(mp);
+                      r.address = mp.vicinity;
+                      r.rating = mp.rating ?? r.rating;
+                      r.reviewCount = mp.user_ratings_total ?? r.reviewCount;
+                      const dist = haversineDistance(latitude, longitude, mp.geometry.location.lat, mp.geometry.location.lng);
+                      r.distance = formatDistance(dist);
+                      r.walkingTime = estimateWalkingTime(dist);
+                      r.drivingTime = estimateDrivingTime(dist);
+                      r.verificationNote = `Verified on Google Maps: ${mp.rating ?? "N/A"}★, ${mp.user_ratings_total ?? 0} reviews`;
+                      r.photoReference = mp.photos?.[0]?.photo_reference || null;
+                      const details = detailsMap.get(mp.place_id);
+                      if (details?.weekday_text) r.kitchenHours = getTodayHours(details.weekday_text);
+                      if (details?.website) r.websiteUrl = details.website;
+                      // Prefer restaurant/menu-specific page URL over generic homepage for all venues
+                      const menuUrl2 = menuPageUrls.get(mp.place_id);
+                      if (menuUrl2) r.websiteUrl = menuUrl2;
+                      verified.push(r);
+                    } else {
+                      console.log(`Retry: could not match "${r.name}" to any verified place`);
+                    }
                   }
-                  if (mp) {
-                    // Keep GPT's restaurant name (may differ from hotel name) for better UX
-                    r.googleMapsUrl = buildGoogleMapsUrl(mp);
-                    r.appleMapsUrl = buildAppleMapsUrl(mp);
-                    r.address = mp.vicinity;
-                    r.rating = mp.rating ?? r.rating;
-                    r.reviewCount = mp.user_ratings_total ?? r.reviewCount;
-                    const dist = haversineDistance(latitude, longitude, mp.geometry.location.lat, mp.geometry.location.lng);
-                    r.distance = formatDistance(dist);
-                    r.walkingTime = estimateWalkingTime(dist);
-                    r.drivingTime = estimateDrivingTime(dist);
-                    r.verificationNote = `Verified on Google Maps: ${mp.rating ?? "N/A"}★, ${mp.user_ratings_total ?? 0} reviews`;
-                    r.photoReference = mp.photos?.[0]?.photo_reference || null;
-                    const details = detailsMap.get(mp.place_id);
-                    if (details?.weekday_text) r.kitchenHours = getTodayHours(details.weekday_text);
-                    if (details?.website) r.websiteUrl = details.website;
-                    // Prefer restaurant/menu-specific page URL over generic homepage for all venues
-                    const menuUrl2 = menuPageUrls.get(mp.place_id);
-                    if (menuUrl2) r.websiteUrl = menuUrl2;
-                    verified.push(r);
-                  } else {
-                    console.log(`Retry: could not match "${r.name}" to any verified place`);
-                  }
+                  recommendations.restaurants = verified;
+                  recommendations.summary = retryRecs.summary || recommendations.summary;
+                  recommendations.whatToAvoid = retryRecs.whatToAvoid || recommendations.whatToAvoid;
+                  console.info(`Retry GPT: ${verified.length} restaurants verified from forced picks`);
+                  // Log extra GPT call
+                  logApiUsage(userId, "recommend-restaurants", "openai", finalRecommendationModel, 0.003);
                 }
-                recommendations.restaurants = verified;
-                recommendations.summary = retryRecs.summary || recommendations.summary;
-                recommendations.whatToAvoid = retryRecs.whatToAvoid || recommendations.whatToAvoid;
-                console.info(`Retry GPT: ${verified.length} restaurants verified from forced picks`);
-                // Log extra GPT call
-                logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o", 0.003);
               }
             }
+          } catch (retryErr) {
+            console.error("Retry GPT error:", retryErr);
           }
-        } catch (retryErr) {
-          console.error("Retry GPT error:", retryErr);
         }
 
         // Final bare fallback if retry also produced 0
@@ -2323,7 +2765,7 @@ ${lowCarbTipInstruction}`;
 
     // Log API usage (non-blocking) — count the API calls made
     // Google: 1 geocoding (airport detect), nearby searches vary, place details
-    // OpenAI: verification (gpt-4o-mini), recommendation (gpt-4o), optional delivery pre-screen (gpt-4o-mini)
+    // OpenAI: verification/cleanup/prescreen on the standard model, final recommendations on the premium model
     const nearbySearchCount = isShopping ? 3 : isDelivery ? 3 : (isAtAirport && isAirportTier ? 5 : (expandedRadius ? 2 : 1));
     const placeDetailsCount = detailsMap.size;
     const hadVerification = unverifiedPlaces.length > 0;
@@ -2332,9 +2774,9 @@ ${lowCarbTipInstruction}`;
     logApiUsage(userId, "recommend-restaurants", "google_maps", "geocoding", 0.0005); // airport detect
     logApiUsage(userId, "recommend-restaurants", "google_maps", "nearby_search", 0.0032 * nearbySearchCount, nearbySearchCount);
     if (placeDetailsCount > 0) logApiUsage(userId, "recommend-restaurants", "google_maps", "place_details", 0.0017 * placeDetailsCount, placeDetailsCount);
-    if (hadVerification) logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o-mini", 0.0002);
-    if (hadPrescreen) logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o-mini", 0.0002);
-    logApiUsage(userId, "recommend-restaurants", "openai", "gpt-4o", 0.003);
+    if (hadVerification) logApiUsage(userId, "recommend-restaurants", "openai", OPENAI_MODEL_STANDARD, 0.0002);
+    if (hadPrescreen) logApiUsage(userId, "recommend-restaurants", "openai", OPENAI_MODEL_STANDARD, 0.0002);
+    logApiUsage(userId, "recommend-restaurants", "openai", finalRecommendationModel, 0.003);
 
     return new Response(JSON.stringify(recommendations), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -2344,8 +2786,9 @@ ${lowCarbTipInstruction}`;
     const isValidationError = e instanceof Error && (
       e.message.startsWith("Invalid") || e.message.includes("must be")
     );
+    const errorMessage = e instanceof Error ? e.message : "Service temporarily unavailable";
     return new Response(
-      JSON.stringify({ error: isValidationError ? e.message : "Service temporarily unavailable" }),
+      JSON.stringify({ error: isValidationError ? errorMessage : errorMessage }),
       { status: isValidationError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -57,21 +57,73 @@ serve(async (req) => {
     const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
     if (!GOOGLE_MAPS_API_KEY) throw new Error("GOOGLE_MAPS_API_KEY not configured");
 
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address.trim())}&key=${GOOGLE_MAPS_API_KEY}`;
+    const normalizedAddress = address.trim();
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(normalizedAddress)}&key=${GOOGLE_MAPS_API_KEY}`;
     const response = await fetch(geocodeUrl);
     if (!response.ok) throw new Error("Geocoding API error");
 
-    // Log API usage (non-blocking)
-    logApiUsage(userId, "geocode", "google_maps", "geocoding", 0.0005);
+    let result: any = null;
+    let usedFallback = false;
 
     const data = await response.json();
-    if (data.status !== "OK" || !data.results?.length) {
+    if (data.status === "OK" && data.results?.length) {
+      result = data.results[0];
+      logApiUsage(userId, "geocode", "google_maps", "geocoding", 0.0005);
+    } else {
+      // Fallback to Places Text Search because some Google API keys allow Places
+      // while the Geocoding API itself is restricted or disabled.
+      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(normalizedAddress)}&key=${GOOGLE_MAPS_API_KEY}`;
+      const placesResponse = await fetch(placesUrl);
+      if (!placesResponse.ok) throw new Error("Places text search error");
+      const placesData = await placesResponse.json();
+      if (placesData.status === "OK" && placesData.results?.length) {
+        const place = placesData.results[0];
+        result = {
+          geometry: place.geometry,
+          formatted_address: place.formatted_address || place.name,
+        };
+        usedFallback = true;
+        logApiUsage(userId, "geocode", "google_maps", "places_text_search", 0.0032);
+      }
+    }
+
+    if (!result?.geometry?.location) {
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(normalizedAddress)}`;
+      const nominatimResponse = await fetch(nominatimUrl, {
+        headers: {
+          "User-Agent": "TheGreekCarnivore/1.0 (info@thegreekcarnivore.com)",
+          "Accept-Language": "en",
+        },
+      });
+      if (nominatimResponse.ok) {
+        const nominatimData = await nominatimResponse.json();
+        if (Array.isArray(nominatimData) && nominatimData.length > 0) {
+          const place = nominatimData[0];
+          result = {
+            geometry: {
+              location: {
+                lat: Number(place.lat),
+                lng: Number(place.lon),
+              },
+            },
+            formatted_address: place.display_name || normalizedAddress,
+          };
+          usedFallback = true;
+          logApiUsage(userId, "geocode", "openstreetmap", "nominatim", 0);
+        }
+      }
+    }
+
+    if (!result?.geometry?.location) {
       return new Response(JSON.stringify({ error: "Location not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const result = data.results[0];
+    if (usedFallback) {
+      console.log("geocode: resolved via Places Text Search fallback");
+    }
+
     return new Response(JSON.stringify({
       lat: result.geometry.location.lat,
       lng: result.geometry.location.lng,
