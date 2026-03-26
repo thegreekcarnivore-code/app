@@ -55,6 +55,12 @@ project_id = "bowvosskzbtuxmrwatoj"
     verify_jwt = false
   [functions.send-reconnect-email]
     verify_jwt = false
+  [functions.password-reset]
+    verify_jwt = false
+  [functions.admin-reset-password]
+    verify_jwt = false
+  [functions.access-link]
+    verify_jwt = false
   [functions.create-checkout]
     verify_jwt = false
   [functions.stripe-webhook]
