@@ -5,6 +5,7 @@ import {
   preparePasswordResetUser,
   verifyPasswordResetToken,
 } from "../_shared/password-reset.ts";
+import { createAppAccessLink } from "../_shared/app-access-links.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,12 +62,20 @@ Deno.serve(async (req) => {
       });
 
       if (target.user && resendApiKey) {
-        await issuePasswordResetEmail({
+        const shortLink = await createAppAccessLink({
           serviceClient,
+          purpose: "password_reset",
+          email: target.email,
+          userId: target.user.id,
+          language: target.language || "el",
+        });
+
+        await issuePasswordResetEmail({
           resendApiKey,
           email: target.email,
           language: target.language || "el",
           user: target.user,
+          confirmationUrl: shortLink.url,
         });
       } else if (adminRequest && !target.user) {
         return new Response(JSON.stringify({ error: "User not found or reset link could not be generated" }), {

@@ -5,6 +5,7 @@ import {
   normalizeEmail,
   toFeatureAccessRecord,
 } from "../_shared/invited-access.ts";
+import { createAppAccessLink } from "../_shared/app-access-links.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -218,10 +219,19 @@ Deno.serve(async (req) => {
 
     const firstName = accessResult.displayName?.split(" ")[0] || "";
     const emailLanguage = accessResult.language || language || "el";
+    const shortLink = await createAppAccessLink({
+      serviceClient,
+      purpose: "magic_login",
+      email: normalizedEmail,
+      userId: accessResult.userId,
+      createdBy: caller.id,
+      language: emailLanguage,
+      redirectPath: "/home",
+    });
     const html = buildInviteHtml({
       firstName,
       language: emailLanguage,
-      loginUrl: accessResult.loginUrl,
+      loginUrl: shortLink.url,
       programName,
       startDate: start_date || null,
     });
@@ -246,6 +256,7 @@ Deno.serve(async (req) => {
         message: resend ? `Access link resent to ${normalizedEmail}` : `Access granted and invitation sent to ${normalizedEmail}`,
         direct_entry: true,
         restored_access: accessResult.restoredAccess,
+        link_url: shortLink.url,
       }),
       {
         status: 200,

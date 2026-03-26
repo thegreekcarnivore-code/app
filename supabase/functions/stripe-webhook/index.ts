@@ -3,6 +3,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { getEmailLogoUrl } from "../_shared/app-config.ts";
 import { ensureInvitedClientAccess, toFeatureAccessRecord } from "../_shared/invited-access.ts";
+import { createAppAccessLink } from "../_shared/app-access-links.ts";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -92,7 +93,7 @@ async function sendWelcomeEmailForExistingUser(
   programName: string,
   programTemplateId: string | null,
   startDate: string,
-  loginUrl: string,
+  createdBy: string | null,
 ) {
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {
@@ -122,7 +123,17 @@ async function sendWelcomeEmailForExistingUser(
   }
 
   const firstName = profile.display_name || profile.email.split("@")[0] || "there";
-  const html = buildWelcomeEmail(programName, durationWeeks, startDate, firstName, loginUrl);
+  const shortLink = await createAppAccessLink({
+    serviceClient: supabase,
+    purpose: "magic_login",
+    email: profile.email,
+    userId: clientUserId,
+    createdBy,
+    language: "el",
+    redirectPath: "/home",
+  });
+
+  const html = buildWelcomeEmail(programName, durationWeeks, startDate, firstName, shortLink.url);
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -259,7 +270,7 @@ serve(async (req) => {
           }
 
           const accessResult = await grantPaidAccess(supabase, targetEmail, programTemplateId, startDate, adminId);
-          await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
+          await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, adminId);
           // Send day-1 welcome messages immediately
           try {
             await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-day-zero-messages`, {
@@ -279,7 +290,7 @@ serve(async (req) => {
           if (existingProfile) {
             logStep("Found existing profile by email, auto-enrolling + sending welcome", { email: clientEmail });
             const accessResult = await grantPaidAccess(supabase, clientEmail, programTemplateId, startDate, adminId);
-            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
+            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, adminId);
             // Send day-1 welcome messages immediately
             try {
               await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-day-zero-messages`, {
@@ -291,7 +302,7 @@ serve(async (req) => {
           } else {
             logStep("Prospect has no account, granting access + sending direct-entry welcome", { email: clientEmail });
             const accessResult = await grantPaidAccess(supabase, clientEmail, programTemplateId, startDate, adminId);
-            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, accessResult.loginUrl);
+            await sendWelcomeEmailForExistingUser(supabase, accessResult.userId, programName, programTemplateId, startDate, adminId);
           }
         }
         break;

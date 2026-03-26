@@ -165,6 +165,8 @@ const Admin = () => {
   const [resendingEmail, setResendingEmail] = useState<string | null>(null);
   const [reconnectingEmail, setReconnectingEmail] = useState<string | null>(null);
   const [resettingPasswordEmail, setResettingPasswordEmail] = useState<string | null>(null);
+  const [copyingAccessEmail, setCopyingAccessEmail] = useState<string | null>(null);
+  const [copyingResetEmail, setCopyingResetEmail] = useState<string | null>(null);
   const [duplicateCandidates, setDuplicateCandidates] = useState<DuplicateProfileCandidate[]>([]);
   const [mergeCandidate, setMergeCandidate] = useState<DuplicateProfileCandidate | null>(null);
   const [mergingDuplicateEmail, setMergingDuplicateEmail] = useState<string | null>(null);
@@ -470,6 +472,62 @@ const Admin = () => {
     toast({
       title: "Password reset sent",
       description: `A reset link was sent to ${email}.`,
+    });
+  };
+
+  const handleCopyAccessLink = async (email: string, language?: string) => {
+    setCopyingAccessEmail(email);
+    const { data, error } = await supabase.functions.invoke("access-link", {
+      body: {
+        action: "create",
+        purpose: "magic_login",
+        email: email.toLowerCase(),
+        language: language || "el",
+        redirect_path: "/home",
+      },
+    });
+    setCopyingAccessEmail(null);
+
+    if (error || !data?.url) {
+      toast({
+        title: "Link generation failed",
+        description: error?.message || data?.error || "Could not create the direct app link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await navigator.clipboard.writeText(data.url);
+    toast({
+      title: "Direct access link copied",
+      description: data.url,
+    });
+  };
+
+  const handleCopyResetLink = async (email: string) => {
+    setCopyingResetEmail(email);
+    const { data, error } = await supabase.functions.invoke("access-link", {
+      body: {
+        action: "create",
+        purpose: "password_reset",
+        email: email.toLowerCase(),
+      },
+    });
+    setCopyingResetEmail(null);
+
+    if (error || !data?.url) {
+      toast({
+        title: "Link generation failed",
+        description: error?.message || data?.error || "Could not create the password reset link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await navigator.clipboard.writeText(data.url);
+    toast({
+      title: "Reset link copied",
+      description: data.url,
     });
   };
 
@@ -1139,6 +1197,22 @@ const Admin = () => {
                           <KeyRound className="h-4 w-4" />
                           <span className="text-[10px] font-medium">
                             {resettingPasswordEmail === u.email ? "Sending..." : "Reset Password"}
+                          </span>
+                        </IconButtonWithTooltip>
+                      )}
+                      {u.email && (
+                        <IconButtonWithTooltip tooltip="Copy Direct Access Link" onClick={() => handleCopyAccessLink(u.email!, inviteInfo?.language)} className="flex items-center gap-1 rounded-lg bg-gold/10 px-2 py-1.5 text-gold hover:bg-gold/20 transition-colors">
+                          <Link2 className="h-4 w-4" />
+                          <span className="text-[10px] font-medium">
+                            {copyingAccessEmail === u.email ? "Creating..." : "Copy Access"}
+                          </span>
+                        </IconButtonWithTooltip>
+                      )}
+                      {u.email && (
+                        <IconButtonWithTooltip tooltip="Copy Reset Link" onClick={() => handleCopyResetLink(u.email!)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-primary hover:bg-primary/20 transition-colors">
+                          <Link2 className="h-4 w-4" />
+                          <span className="text-[10px] font-medium">
+                            {copyingResetEmail === u.email ? "Creating..." : "Copy Reset"}
                           </span>
                         </IconButtonWithTooltip>
                       )}

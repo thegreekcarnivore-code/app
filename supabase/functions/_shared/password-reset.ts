@@ -220,40 +220,18 @@ export async function preparePasswordResetUser({
 }
 
 export async function issuePasswordResetEmail({
-  serviceClient,
   resendApiKey,
   email,
   language,
   user,
+  confirmationUrl,
 }: {
-  serviceClient: any;
   resendApiKey: string;
   email: string;
   language: string;
   user: any;
+  confirmationUrl: string;
 }) {
-  const nonce = generateNonce();
-  const exp = Math.floor(Date.now() / 1000) + RESET_TOKEN_TTL_SECONDS;
-  const resetToken = await createPasswordResetToken({
-    sub: user.id,
-    email,
-    nonce,
-    exp,
-  });
-
-  const userMetadata = sanitizeUserMetadata(user.user_metadata, nonce);
-
-  const { data: updatedUserData, error: updateUserError } = await serviceClient.auth.admin.updateUserById(user.id, {
-    email_confirm: true,
-    user_metadata: userMetadata,
-  });
-
-  if (updateUserError || !updatedUserData.user) {
-    throw new Error(updateUserError?.message || "Failed to prepare password reset session");
-  }
-
-  const confirmationUrl = `${buildAppUrl("/reset-password")}?reset_token=${encodeURIComponent(resetToken)}`;
-
   const html = await renderAsync(
     React.createElement(RecoveryEmail, {
       siteName: "The Greek Carnivore",
@@ -288,7 +266,44 @@ export async function issuePasswordResetEmail({
 
   return {
     confirmationUrl,
+  };
+}
+
+export async function createPasswordResetSessionLink({
+  serviceClient,
+  email,
+  user,
+}: {
+  serviceClient: any;
+  email: string;
+  user: any;
+}) {
+  const nonce = generateNonce();
+  const exp = Math.floor(Date.now() / 1000) + RESET_TOKEN_TTL_SECONDS;
+  const resetToken = await createPasswordResetToken({
+    sub: user.id,
+    email,
+    nonce,
+    exp,
+  });
+
+  const userMetadata = sanitizeUserMetadata(user.user_metadata, nonce);
+
+  const { data: updatedUserData, error: updateUserError } = await serviceClient.auth.admin.updateUserById(user.id, {
+    email_confirm: true,
+    user_metadata: userMetadata,
+  });
+
+  if (updateUserError || !updatedUserData.user) {
+    throw new Error(updateUserError?.message || "Failed to prepare password reset session");
+  }
+
+  const confirmationUrl = `${buildAppUrl("/reset-password")}?reset_token=${encodeURIComponent(resetToken)}`;
+
+  return {
+    confirmationUrl,
     expiresAt: exp,
+    resetToken,
   };
 }
 

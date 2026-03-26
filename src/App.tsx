@@ -33,6 +33,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Discover = lazy(() => import("./pages/Discover"));
 const Auth = lazy(() => import("./pages/Auth"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const AccessLink = lazy(() => import("./pages/AccessLink"));
 const Admin = lazy(() => import("./pages/Admin"));
 const PendingApproval = lazy(() => import("./pages/PendingApproval"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -92,6 +93,8 @@ const App = () => (
                   <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
                   <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/go/:token" element={<AccessLink mode="join" />} />
+                  <Route path="/reset/:token" element={<AccessLink mode="reset" />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/payment-success" element={<PaymentSuccess />} />
                   <Route path="/payment-canceled" element={<PaymentCanceled />} />

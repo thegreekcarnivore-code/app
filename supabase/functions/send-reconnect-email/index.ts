@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getEmailLogoUrl } from "../_shared/app-config.ts";
 import { ensureInvitedClientAccess, normalizeEmail } from "../_shared/invited-access.ts";
+import { createAppAccessLink } from "../_shared/app-access-links.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,7 +140,16 @@ Deno.serve(async (req) => {
 
     const firstName = accessResult.displayName?.split(" ")[0] || "";
     const emailLanguage = accessResult.language || language || "el";
-    const html = buildReconnectHtml(firstName, emailLanguage, accessResult.loginUrl);
+    const shortLink = await createAppAccessLink({
+      serviceClient,
+      purpose: "magic_login",
+      email: normalizedEmail,
+      userId: accessResult.userId,
+      createdBy: caller.id,
+      language: emailLanguage,
+      redirectPath: "/home",
+    });
+    const html = buildReconnectHtml(firstName, emailLanguage, shortLink.url);
     const subject = emailLanguage === "el"
       ? "Νέος σύνδεσμος εισόδου για το The Greek Carnivore"
       : "Your fresh login link for The Greek Carnivore";
@@ -156,6 +166,7 @@ Deno.serve(async (req) => {
         message: `Reconnect email sent to ${normalizedEmail}`,
         restored_access: accessResult.restoredAccess,
         direct_entry: true,
+        link_url: shortLink.url,
       }),
       {
         status: 200,

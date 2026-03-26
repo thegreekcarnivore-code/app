@@ -3,6 +3,7 @@ import {
   issuePasswordResetEmail,
   preparePasswordResetUser,
 } from "../_shared/password-reset.ts";
+import { createAppAccessLink } from "../_shared/app-access-links.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,12 +87,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    await issuePasswordResetEmail({
+    const shortLink = await createAppAccessLink({
       serviceClient: adminClient,
+      purpose: "password_reset",
+      email: trimmedEmail,
+      userId: resetTarget.user.id,
+      createdBy: caller.id,
+      language: resetTarget.language || "el",
+    });
+
+    await issuePasswordResetEmail({
       resendApiKey,
       email: trimmedEmail,
       language: resetTarget.language || "el",
       user: resetTarget.user,
+      confirmationUrl: shortLink.url,
     });
 
     console.log("Recovery email sent to:", trimmedEmail);
