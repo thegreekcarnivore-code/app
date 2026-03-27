@@ -714,7 +714,7 @@ const Admin = () => {
             <img src={logo} alt="The Greek Carnivore" className="h-12 w-auto object-contain" />
             <div className="space-y-1">
               <p className="font-sans text-xs font-semibold uppercase tracking-[0.28em] text-gold">Coaching Operations</p>
-              <h1 className="font-serif text-2xl font-semibold text-foreground">Admin Panel</h1>
+              <h1 className="font-serif text-2xl font-semibold text-foreground">Admin Panel Carnivore</h1>
               <p className="max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
                 Keep client operations, enrollment flow, follow-ups, and business visibility in one controlled workspace.
               </p>
