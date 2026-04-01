@@ -44,6 +44,8 @@ const VideoLibrary = lazy(() => import("./pages/VideoLibrary"));
 const Resources = lazy(() => import("./pages/Resources"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Community = lazy(() => import("./pages/Community"));
+const ContentAutomation = lazy(() => import("./pages/ContentAutomation"));
+const KillswitchPanel = lazy(() => import("./pages/KillswitchPanel"));
 
 const RouteLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -109,6 +111,8 @@ const App = () => (
                     <Route path="/community" element={<Community />} />
                   </Route>
                   <Route path="/admin/client/:userId" element={<AdminRoute><AdminClientView /></AdminRoute>} />
+                  <Route path="/content-automation" element={<AdminRoute><ContentAutomation /></AdminRoute>} />
+                  <Route path="/killswitch" element={<AdminRoute><KillswitchPanel /></AdminRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

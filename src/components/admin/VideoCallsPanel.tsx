@@ -74,6 +74,9 @@ const VideoCallsPanel = () => {
   const [sendingNotify, setSendingNotify] = useState(false);
   const [transcriptCall, setTranscriptCall] = useState<VideoCall | null>(null);
   const [alreadyNotifiedEmails, setAlreadyNotifiedEmails] = useState<Set<string>>(new Set());
+  const [alreadyInAppNotifiedEmails, setAlreadyInAppNotifiedEmails] = useState<Set<string>>(new Set());
+  const [editNotifiedEmails, setEditNotifiedEmails] = useState<Set<string>>(new Set());
+  const [editInAppNotifiedUserIds, setEditInAppNotifiedUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchCalls();
@@ -148,13 +151,37 @@ const VideoCallsPanel = () => {
     setSelectedParticipants([]);
     setManualEmails([]);
     setManualEmailInput("");
+    setEditNotifiedEmails(new Set());
+    setEditInAppNotifiedUserIds(new Set());
     setDialogOpen(true);
   };
 
-  const openEdit = (call: VideoCall) => {
+  const openEdit = async (call: VideoCall) => {
     setEditingCall(call);
     populateForm(call, false);
     setDialogOpen(true);
+
+    // Fetch email-sent status for this call
+    const { data: sentRows } = await supabase
+      .from("call_notifications_sent" as any)
+      .select("email")
+      .eq("video_call_id", call.id);
+    setEditNotifiedEmails(new Set((sentRows as any[] || []).map((r: any) => r.email.toLowerCase())));
+
+    // Fetch in-app sent status
+    const participantIds = (call.participants || []).map(p => p.user_id);
+    if (participantIds.length > 0) {
+      const { data: msgRows } = await supabase
+        .from("messages" as any)
+        .select("receiver_id")
+        .eq("sender_id", user?.id)
+        .eq("is_automated", true)
+        .in("receiver_id", participantIds)
+        .ilike("content", `%${call.meeting_url}%`);
+      setEditInAppNotifiedUserIds(new Set((msgRows as any[] || []).map((r: any) => r.receiver_id)));
+    } else {
+      setEditInAppNotifiedUserIds(new Set());
+    }
   };
 
   const openDuplicate = (call: VideoCall) => {
@@ -360,7 +387,7 @@ const VideoCallsPanel = () => {
     setNotifyMessage(defaultMsg);
     setNotifyCall(call);
 
-    // Fetch already-notified emails for this call
+    // Fetch already-sent email notifications for this call
     const { data: sentRows } = await supabase
       .from("call_notifications_sent" as any)
       .select("email")
@@ -369,6 +396,32 @@ const VideoCallsPanel = () => {
       setAlreadyNotifiedEmails(new Set((sentRows as any[]).map((r: any) => r.email.toLowerCase())));
     } else {
       setAlreadyNotifiedEmails(new Set());
+    }
+
+    // Best-effort fetch for in-app sends: participants who already have an automated message containing this meeting URL
+    const participantIds = (call.participants || []).map(p => p.user_id);
+    if (participantIds.length > 0) {
+      const { data: msgRows } = await supabase
+        .from("messages" as any)
+        .select("receiver_id")
+        .eq("sender_id", user?.id)
+        .eq("is_automated", true)
+        .in("receiver_id", participantIds)
+        .ilike("content", `%${call.meeting_url}%`);
+
+      if (msgRows) {
+        const sentUserIds = new Set((msgRows as any[]).map((r: any) => r.receiver_id));
+        const sentEmails = new Set(
+          (call.participants || [])
+            .filter(p => sentUserIds.has(p.user_id))
+            .map(p => p.email.toLowerCase())
+        );
+        setAlreadyInAppNotifiedEmails(sentEmails);
+      } else {
+        setAlreadyInAppNotifiedEmails(new Set());
+      }
+    } else {
+      setAlreadyInAppNotifiedEmails(new Set());
     }
   };
 
@@ -389,7 +442,10 @@ const VideoCallsPanel = () => {
         : { data: [] };
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
-      // Send in-app messages to registered participants only
+      // Send in-app messages to registered participants only.
+      // This currently may hit a backend trigger bug if app.settings.supabase_url is not configured,
+      // so handle it separately and continue with email delivery.
+      let inAppError: any = null;
       if (participants.length > 0) {
         const messages = participants.map(p => {
           const profile = profileMap.get(p.user_id);
@@ -397,8 +453,11 @@ const VideoCallsPanel = () => {
           const personalMsg = notifyMessage.replace(/\{First_Name\}/g, firstName);
           return { sender_id: user.id, receiver_id: p.user_id, content: personalMsg, is_automated: true };
         });
-        const { error: msgError } = await supabase.from("messages").insert(messages);
-        if (msgError) throw msgError;
+        const { error: msgInsertError } = await supabase.from("messages").insert(messages);
+        if (msgInsertError) {
+          console.warn("In-app notification insert failed:", msgInsertError);
+          inAppError = msgInsertError;
+        }
       }
 
       // Build email recipients: registered participants + guest emails
@@ -427,19 +486,35 @@ const VideoCallsPanel = () => {
         });
         if (emailError) {
           console.warn("Email notification failed:", emailError);
-          toast({ title: "In-app messages sent!", description: `Email delivery failed: ${emailError.message || "Unknown error"}`, variant: "destructive" });
+          toast({
+            title: inAppError ? "Notifications partially failed" : "In-app messages sent!",
+            description: `Email delivery failed: ${emailError.message || "Unknown error"}${inAppError ? " · In-app also failed" : ""}`,
+            variant: "destructive"
+          });
         } else if (emailResult?.errors?.length > 0) {
-          toast({ title: "Partial email delivery", description: `${emailResult.emails_sent} sent, ${emailResult.emails_skipped || 0} already notified, ${emailResult.errors.length} failed`, variant: "destructive" });
+          toast({
+            title: "Partial email delivery",
+            description: `${emailResult.emails_sent} sent, ${emailResult.emails_skipped || 0} already notified, ${emailResult.errors.length} failed${inAppError ? " · In-app failed" : ""}`,
+            variant: "destructive"
+          });
         } else {
           const sent = emailResult?.emails_sent || 0;
           const skipped = emailResult?.emails_skipped || 0;
           const desc = skipped > 0
-            ? `${sent} email(s) sent, ${skipped} already notified`
-            : `${sent} email(s) sent`;
-          toast({ title: "Notifications sent!", description: desc });
+            ? `${sent} email(s) sent, ${skipped} already notified${inAppError ? " · In-app failed" : ""}`
+            : `${sent} email(s) sent${inAppError ? " · In-app failed" : ""}`;
+          toast({
+            title: inAppError ? "Email sent, in-app failed" : "Notifications sent!",
+            description: desc,
+            variant: inAppError ? "destructive" : undefined,
+          });
         }
       } else if (participants.length > 0) {
-        toast({ title: "In-app messages sent!", description: `${participants.length} participant(s) notified.` });
+        if (inAppError) {
+          toast({ title: "In-app notifications failed", description: inAppError.message || "Unknown error", variant: "destructive" });
+        } else {
+          toast({ title: "In-app messages sent!", description: `${participants.length} participant(s) notified.` });
+        }
       }
     } catch (e: any) {
       toast({ title: "Error sending notifications", description: e.message, variant: "destructive" });
@@ -790,22 +865,28 @@ const VideoCallsPanel = () => {
                 </div>
               )}
               <div className="max-h-40 overflow-y-auto rounded-lg border border-border mt-1 divide-y divide-border">
-                {filteredClients.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleParticipant(c.id)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-sans transition-colors ${
-                      selectedParticipants.includes(c.id) ? "bg-gold/10 text-gold" : "text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${
-                      selectedParticipants.includes(c.id) ? "border-gold bg-gold text-gold-foreground" : "border-border"
-                    }`}>
-                      {selectedParticipants.includes(c.id) && "✓"}
-                    </span>
-                    {c.email}
-                  </button>
-                ))}
+                {filteredClients.map(c => {
+                  const emailSent = editNotifiedEmails.has(c.email.toLowerCase());
+                  const inAppSent = editInAppNotifiedUserIds.has(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => toggleParticipant(c.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-sans transition-colors ${
+                        selectedParticipants.includes(c.id) ? "bg-gold/10 text-gold" : "text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${
+                        selectedParticipants.includes(c.id) ? "border-gold bg-gold text-gold-foreground" : "border-border"
+                      }`}>
+                        {selectedParticipants.includes(c.id) && "✓"}
+                      </span>
+                      <span className="flex-1 text-left">{c.email}</span>
+                      {emailSent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">email sent</Badge>}
+                      {inAppSent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">in-app sent</Badge>}
+                    </button>
+                  );
+                })}
                 {filteredClients.length === 0 && (
                   <p className="text-center text-[11px] font-sans text-muted-foreground py-3">No clients in this category.</p>
                 )}
@@ -876,23 +957,25 @@ const VideoCallsPanel = () => {
               <p>Sending to {(notifyCall?.participants?.length || 0) + (notifyCall?.guest_emails?.length || 0)} recipient(s):</p>
               <div className="space-y-0.5">
                 {notifyCall?.participants?.map(p => {
-                  const sent = alreadyNotifiedEmails.has(p.email.toLowerCase());
+                  const emailSent = alreadyNotifiedEmails.has(p.email.toLowerCase());
+                  const inAppSent = alreadyInAppNotifiedEmails.has(p.email.toLowerCase());
                   return (
-                    <div key={p.user_id} className="flex items-center gap-1.5">
-                      {sent && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
-                      <span className={sent ? "line-through opacity-60" : ""}>{p.email}</span>
-                      {sent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">already sent</Badge>}
+                    <div key={p.user_id} className="flex items-center gap-1.5 flex-wrap">
+                      {(emailSent || inAppSent) && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
+                      <span className={emailSent || inAppSent ? "opacity-80" : ""}>{p.email}</span>
+                      {emailSent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">email sent</Badge>}
+                      {inAppSent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">in-app sent</Badge>}
                     </div>
                   );
                 })}
                 {notifyCall?.guest_emails?.map(email => {
-                  const sent = alreadyNotifiedEmails.has(email.toLowerCase());
+                  const emailSent = alreadyNotifiedEmails.has(email.toLowerCase());
                   return (
-                    <div key={email} className="flex items-center gap-1.5">
-                      {sent && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
-                      <span className={sent ? "line-through opacity-60" : ""}>{email}</span>
+                    <div key={email} className="flex items-center gap-1.5 flex-wrap">
+                      {emailSent && <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />}
+                      <span className={emailSent ? "opacity-80" : ""}>{email}</span>
                       <span className="italic text-[10px]">(external)</span>
-                      {sent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">already sent</Badge>}
+                      {emailSent && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">email sent</Badge>}
                     </div>
                   );
                 })}
