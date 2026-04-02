@@ -173,7 +173,19 @@ const ClientAccountabilityPanel = ({ open, onOpenChange }: Props) => {
         is_automated: true,
       } as any);
       if (error) throw error;
-      toast({ title: "Message sent!" });
+
+      // Also send email notification
+      supabase.functions.invoke("send-message-email", {
+        body: {
+          receiver_id: messageTarget.userId,
+          sender_id: user.id,
+          is_automated: true,
+        },
+      }).catch((emailErr) => {
+        console.error("Email notification failed:", emailErr);
+      });
+
+      toast({ title: "Message sent + email notification!" });
       setGeneratedMessage("");
       setMessageTarget(null);
     } catch (err: any) {
