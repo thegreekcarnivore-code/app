@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import {
   Apple,
+  BookOpen,
   CalendarDays,
   Camera,
   ChevronRight,
@@ -29,12 +30,13 @@ import MeasurementForm from "@/components/measurements/MeasurementForm";
 import BodyDashboard from "@/components/measurements/BodyDashboard";
 import FoodDashboard from "@/components/measurements/FoodDashboard";
 import PhotosDashboard from "@/components/measurements/PhotosDashboard";
+import WellnessJournal from "@/components/measurements/WellnessJournal";
 
 interface MeasurementsProps {
   userId?: string;
 }
 
-type MeasurementTabKey = "body" | "food" | "photos";
+type MeasurementTabKey = "body" | "food" | "photos" | "journal";
 
 interface MeasurementEntry {
   measured_at: string;
@@ -94,7 +96,8 @@ interface WeeklyCheckInOverview {
 const tabs = [
   { key: "body", icon: Scale, en: "Body", el: "Σώμα" },
   { key: "food", icon: Apple, en: "Food", el: "Φαγητό" },
-  { key: "photos", icon: Camera, en: "Photos", el: "Φωτογραφίες" },
+  { key: "photos", icon: Camera, en: "Photos", el: "Φωτό" },
+  { key: "journal", icon: BookOpen, en: "Journal", el: "Ημερολόγιο" },
 ] as const;
 
 const wellnessKeys = [
@@ -193,7 +196,7 @@ const formatCheckInCountdown = (target: Date | null, isGreek: boolean) => {
 };
 
 const isTabKey = (value: string | null): value is MeasurementTabKey =>
-  value === "body" || value === "food" || value === "photos";
+  value === "body" || value === "food" || value === "photos" || value === "journal";
 
 const Measurements = ({ userId }: MeasurementsProps) => {
   const { lang } = useLanguage();
@@ -203,6 +206,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
   const [activeTab, setActiveTab] = useState<MeasurementTabKey>(isTabKey(initialTab) ? initialTab : "body");
   const { registerActions, clearActions } = usePageActions();
   const [formOpen, setFormOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(searchParams.get("checkIn"));
   const targetUserId = userId || user?.id;
@@ -870,21 +874,27 @@ const Measurements = ({ userId }: MeasurementsProps) => {
           ))}
         </div>
 
-        <div className="flex gap-2">
-          {tabs.map(({ key, icon: Icon, en, el }) => (
+        <div className="flex gap-1.5">
+          {tabs.map(({ key, icon: Icon, en, el: elLabel }) => (
             <button
               key={key}
               data-guide={`measurements-${key}`}
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                if (key === "journal") {
+                  setJournalOpen(true);
+                } else {
+                  setActiveTab(key);
+                }
+              }}
               className={cn(
-                "inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 font-sans text-sm font-medium transition-all",
-                activeTab === key
+                "inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 font-sans text-xs font-medium transition-all",
+                (activeTab === key || (key === "journal" && journalOpen))
                   ? "bg-gold text-gold-foreground shadow-sm"
                   : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {lang === "en" ? en : el}
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{lang === "en" ? en : elLabel}</span>
             </button>
           ))}
         </div>
@@ -1037,6 +1047,15 @@ const Measurements = ({ userId }: MeasurementsProps) => {
           <PhotosDashboard userId={userId} />
         </section>
       )}
+
+      <WellnessJournal
+        open={journalOpen}
+        onOpenChange={(open) => {
+          setJournalOpen(open);
+          if (!open && activeTab === "journal") setActiveTab("body");
+        }}
+        userId={targetUserId || ""}
+      />
 
       <Dialog open={checkInDialogOpen} onOpenChange={setCheckInDialogOpen}>
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden">
