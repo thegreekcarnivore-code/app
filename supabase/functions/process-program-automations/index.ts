@@ -250,39 +250,8 @@ Deno.serve(async (req) => {
                 is_automated: true,
               });
               messagesSent++;
-
-              // Send email if also_send_email is enabled OR for legacy weekly measurement reminders
-              const shouldEmail = (msg.also_send_email === true) || (msg.recurrence === "weekly" && !msg.also_send_email && msg.also_send_email !== false);
-              if (shouldEmail && resendApiKey && profile?.email) {
-                try {
-                  // Use measurement-specific email for weekly measurement reminders, generic for others
-                  const isMeasurementReminder = msg.recurrence === "weekly" && msg.message_content.includes("μετρήσ");
-                  const emailHtml = isMeasurementReminder
-                    ? buildMeasurementReminderEmail(clientName, clientLang)
-                    : buildGenericMessageEmail(clientName, content, clientLang);
-                  const emailSubject = isMeasurementReminder
-                    ? "Υπενθύμιση Μετρήσεων 📸 — The Greek Carnivore"
-                    : `The Greek Carnivore — ${content.substring(0, 50)}`;
-
-                  const emailRes = await fetch("https://api.resend.com/emails", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${resendApiKey}`,
-                    },
-                    body: JSON.stringify({
-                      from: FROM_EMAIL,
-                      to: [profile.email],
-                      subject: emailSubject,
-                      html: emailHtml,
-                    }),
-                  });
-                  if (emailRes.ok) emailsSent++;
-                  else console.error(`Email to ${profile.email} failed:`, await emailRes.text());
-                } catch (e) {
-                  console.error(`Email error for ${profile.email}:`, e);
-                }
-              }
+              // Email is now handled by the database trigger → send-message-email edge function,
+              // which includes the actual message content in a rich template. No direct send needed.
             }
           }
         }

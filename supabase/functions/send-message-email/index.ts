@@ -70,22 +70,37 @@ function buildPersonalEmail(firstName: string, lang: string): { subject: string;
   };
 }
 
-function buildAutomatedEmail(firstName: string, lang: string): { subject: string; html: string } {
+function buildAutomatedEmail(firstName: string, lang: string, content: string): { subject: string; html: string } {
   const isEl = lang === "el";
 
-  const subject = isEl
-    ? "Νέα ενημέρωση — The Greek Carnivore"
-    : "New Update — The Greek Carnivore";
+  // Use the first line / first sentence of the message as the subject
+  const firstLine = content.split(/\n/)[0].trim().replace(/\{client_name\}/g, firstName);
+  const subjectPreview = firstLine.length > 60 ? firstLine.substring(0, 57) + "…" : firstLine;
 
-  const heading = isEl ? "Νέα Ενημέρωση 📋" : "New Update 📋";
+  const subject = subjectPreview
+    ? `${subjectPreview} — The Greek Carnivore`
+    : (isEl ? "Νέο μήνυμα από τον Αλέξανδρο — The Greek Carnivore" : "New message from Alexandros — The Greek Carnivore");
 
-  const greeting = isEl ? `Γεια σου <strong>${firstName}</strong>,` : `Hello <strong>${firstName}</strong>,`;
+  const heading = isEl
+    ? "Νέο μήνυμα από τον Αλέξανδρο 💬"
+    : "New message from Alexandros 💬";
 
-  const bodyText = isEl
-    ? "Έχεις μια νέα ενημέρωση στην εφαρμογή σου. Μπορεί να αφορά μια εργασία, υπενθύμιση ή πληροφορία σχετικά με το πρόγραμμά σου. Άνοιξε την εφαρμογή για περισσότερες λεπτομέρειες."
-    : "You have a new update in your app. It may be about a task, a reminder, or information related to your program. Open the app for more details.";
+  const greeting = isEl
+    ? `Γεια σου <strong>${firstName}</strong>,`
+    : `Hi <strong>${firstName}</strong>,`;
+
+  const intro = isEl
+    ? "Ο Αλέξανδρος σου έστειλε ένα νέο μήνυμα στο πρόγραμμά σου:"
+    : "Alexandros sent you a new message as part of your program:";
 
   const ctaText = isEl ? "Άνοιξε την Εφαρμογή" : "Open App";
+
+  // Escape HTML in content and preserve line breaks
+  const safeContent = content
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
 
   return {
     subject,
@@ -95,9 +110,10 @@ function buildAutomatedEmail(firstName: string, lang: string): { subject: string
 <body style="margin:0;padding:0;background-color:#ffffff;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;padding:40px 30px;">
     <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
-    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 20px;letter-spacing:0.02em;">${heading}</h1>
-    <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 12px;">${greeting}</p>
-    <p style="font-size:14px;color:#666;line-height:1.7;margin:0 0 24px;">${bodyText}</p>
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 16px;letter-spacing:0.02em;">${heading}</h1>
+    <p style="font-size:15px;color:#444;line-height:1.6;margin:0 0 8px;">${greeting}</p>
+    <p style="font-size:14px;color:#888;line-height:1.6;margin:0 0 20px;">${intro}</p>
+    <div style="background:#faf8f4;border-left:3px solid #b39a64;border-radius:0 10px 10px 0;padding:18px 20px;margin:0 0 28px;font-size:15px;color:#2a2a2a;line-height:1.75;">${safeContent}</div>
     <a href="${buildAppUrl("/home")}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;">${ctaText}</a>
     <p style="font-size:12px;color:#999;margin:32px 0 0;line-height:1.5;">The Greek Carnivore</p>
   </div>
@@ -110,7 +126,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { receiver_id, sender_id, is_automated } = await req.json();
+    const { receiver_id, sender_id, is_automated, content = "" } = await req.json();
 
     if (!receiver_id || !sender_id) {
       return new Response(JSON.stringify({ error: "receiver_id and sender_id required" }), {
@@ -155,7 +171,7 @@ Deno.serve(async (req) => {
       const firstName = receiverProfile.display_name?.split(" ")[0] || receiverProfile.email.split("@")[0] || "there";
       const lang = receiverProfile.language || "el";
       ({ subject, html } = is_automated
-        ? buildAutomatedEmail(firstName, lang)
+        ? buildAutomatedEmail(firstName, lang, content)
         : buildPersonalEmail(firstName, lang));
     } else {
       // Client → Admin (coach): notify Alexandros
