@@ -163,6 +163,25 @@ const EditEnrollmentDialog = ({ open, onOpenChange, userId, userEmail, onSaved }
         toast({ title: "Error", description: error.message, variant: "destructive" });
       } else {
         toast({ title: lang === "en" ? "Enrollment created" : "Δημιουργήθηκε" });
+        // Send day-zero messages + tasks
+        supabase.functions.invoke("send-day-zero-messages", {
+          body: { user_id: userId },
+        }).then(({ error: dzErr }) => {
+          if (dzErr) console.error("Day-zero messages failed:", dzErr);
+        });
+        // Send welcome email
+        if (selectedTemplate) {
+          supabase.functions.invoke("send-enrollment-welcome", {
+            body: {
+              client_id: userId,
+              program_name: selectedTemplate.name,
+              duration_weeks: durationOverride ?? selectedTemplate.duration_weeks,
+              start_date: startDate,
+            },
+          }).then(({ error: emailErr }) => {
+            if (emailErr) console.error("Welcome email failed:", emailErr);
+          });
+        }
         onSaved();
         onOpenChange(false);
       }
