@@ -103,7 +103,13 @@ const ProgramEnrollmentsTab = ({ templateId, templateName, durationWeeks }: Prop
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Client enrolled" });
-      // Send welcome email in Greek
+      // Send day-zero messages + tasks
+      supabase.functions.invoke("send-day-zero-messages", {
+        body: { user_id: selectedClient },
+      }).then(({ error: dzErr }) => {
+        if (dzErr) console.error("Day-zero messages failed:", dzErr);
+      });
+      // Send welcome email
       supabase.functions.invoke("send-enrollment-welcome", {
         body: {
           client_id: selectedClient,
