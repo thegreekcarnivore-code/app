@@ -50,6 +50,7 @@ interface ShopResult {
   websiteUrl?: string;
   photoReference?: string;
   michelinStars?: number;
+  menuVerified?: boolean;
 }
 
 interface ShoppingResult {
@@ -229,7 +230,7 @@ const Shopping = () => {
             {allShops.length > 0 && (
               <div className="space-y-3">
                 {allShops.map((r, i) => (
-                  <RestaurantCard key={r.name + i} restaurant={{ id: String(i), name: r.name, rating: r.rating, reviewCount: r.reviewCount, distance: r.distance, walkingTime: r.walkingTime, drivingTime: r.drivingTime, averagePrice: r.averagePrice, whyThisPlace: r.whyThisPlace, mealOptions: r.mealOptions, powerPhrase: r.orderingPhrase, cuisine: r.cuisine, kitchenHours: r.kitchenHours, address: r.address, photoQuery: r.photoQuery, verificationNote: r.verificationNote, googleMapsUrl: r.googleMapsUrl, appleMapsUrl: r.appleMapsUrl, websiteUrl: r.websiteUrl, photoReference: r.photoReference }} index={i} city={r.address || locationName || "Nearby"} source="shopping" />
+                  <RestaurantCard key={r.name + i} restaurant={{ id: String(i), name: r.name, rating: r.rating, reviewCount: r.reviewCount, distance: r.distance, walkingTime: r.walkingTime, drivingTime: r.drivingTime, averagePrice: r.averagePrice, whyThisPlace: r.whyThisPlace, mealOptions: r.mealOptions, powerPhrase: r.orderingPhrase, cuisine: r.cuisine, kitchenHours: r.kitchenHours, address: r.address, photoQuery: r.photoQuery, verificationNote: r.verificationNote, googleMapsUrl: r.googleMapsUrl, appleMapsUrl: r.appleMapsUrl, websiteUrl: r.websiteUrl, photoReference: r.photoReference, menuVerified: (r as any).menuVerified }} index={i} city={r.address || locationName || "Nearby"} source="shopping" />
                 ))}
               </div>
             )}

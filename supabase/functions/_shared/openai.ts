@@ -47,6 +47,26 @@ export async function createOpenAIChatCompletionResponse(body: Record<string, un
   });
 }
 
+export async function createOpenAIEmbeddings(
+  inputs: string[],
+  model: string = getOpenAIModel("OPENAI_MODEL_EMBEDDING", "text-embedding-3-small"),
+): Promise<number[][]> {
+  if (inputs.length === 0) return [];
+  const response = await fetch(`${OPENAI_API_BASE_URL}/embeddings`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getOpenAIApiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model, input: inputs }),
+  });
+  const data = await parseOpenAIResponse(response);
+  if (!Array.isArray(data?.data)) throw new Error("Invalid embeddings response");
+  return data.data
+    .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
+    .map((row: { embedding: number[] }) => row.embedding);
+}
+
 export async function transcribeAudioWithOpenAI({
   audioBytes,
   fileName,

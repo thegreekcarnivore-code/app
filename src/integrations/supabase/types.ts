@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.4"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -166,6 +191,111 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      app_access_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          language: string | null
+          last_accessed_at: string | null
+          purpose: string
+          redirect_path: string | null
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          language?: string | null
+          last_accessed_at?: string | null
+          purpose: string
+          redirect_path?: string | null
+          token?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          language?: string | null
+          last_accessed_at?: string | null
+          purpose?: string
+          redirect_path?: string | null
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      buddy_pairings: {
+        Row: {
+          ended_at: string | null
+          id: string
+          paired_at: string
+          shared_goal: string | null
+          status: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          paired_at?: string
+          shared_goal?: string | null
+          status?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          paired_at?: string
+          shared_goal?: string | null
+          status?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buddy_pairings_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buddy_pairings_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       call_notifications_sent: {
         Row: {
@@ -485,6 +615,7 @@ export type Database = {
           agreement_notes: string | null
           amount_paid: number
           created_at: string
+          drip_duration_days: number
           end_date: string | null
           id: string
           installments_paid: number
@@ -504,6 +635,7 @@ export type Database = {
           agreement_notes?: string | null
           amount_paid?: number
           created_at?: string
+          drip_duration_days?: number
           end_date?: string | null
           id?: string
           installments_paid?: number
@@ -523,6 +655,7 @@ export type Database = {
           agreement_notes?: string | null
           amount_paid?: number
           created_at?: string
+          drip_duration_days?: number
           end_date?: string | null
           id?: string
           installments_paid?: number
@@ -641,6 +774,270 @@ export type Database = {
           },
         ]
       }
+      coach_knowledge: {
+        Row: {
+          chunk_index: number
+          chunk_text: string
+          embedding: string | null
+          id: string
+          ingested_at: string
+          language: string
+          metadata: Json
+          source_id: string | null
+          source_title: string | null
+          source_type: string
+          source_url: string | null
+          token_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          chunk_index?: number
+          chunk_text: string
+          embedding?: string | null
+          id?: string
+          ingested_at?: string
+          language?: string
+          metadata?: Json
+          source_id?: string | null
+          source_title?: string | null
+          source_type: string
+          source_url?: string | null
+          token_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          chunk_index?: number
+          chunk_text?: string
+          embedding?: string | null
+          id?: string
+          ingested_at?: string
+          language?: string
+          metadata?: Json
+          source_id?: string | null
+          source_title?: string | null
+          source_type?: string
+          source_url?: string | null
+          token_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      community_auto_posts: {
+        Row: {
+          created_at: string
+          group_id: string | null
+          group_post_id: string | null
+          id: string
+          posted_for_date: string
+          prompt_template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          group_id?: string | null
+          group_post_id?: string | null
+          id?: string
+          posted_for_date: string
+          prompt_template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          group_id?: string | null
+          group_post_id?: string | null
+          id?: string
+          posted_for_date?: string
+          prompt_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_auto_posts_prompt_template_id_fkey"
+            columns: ["prompt_template_id"]
+            isOneToOne: false
+            referencedRelation: "community_prompt_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_post_moderation: {
+        Row: {
+          categories: Json
+          category_scores: Json
+          created_at: string
+          detector_model: string
+          flagged: boolean
+          group_post_id: string
+          id: string
+          resolution: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+        }
+        Insert: {
+          categories?: Json
+          category_scores?: Json
+          created_at?: string
+          detector_model?: string
+          flagged?: boolean
+          group_post_id: string
+          id?: string
+          resolution?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Update: {
+          categories?: Json
+          category_scores?: Json
+          created_at?: string
+          detector_model?: string
+          flagged?: boolean
+          group_post_id?: string
+          id?: string
+          resolution?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_post_moderation_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_prompt_templates: {
+        Row: {
+          body: string
+          created_at: string
+          dow: number
+          id: string
+          is_active: boolean
+          language: string
+          last_used_at: string | null
+          tag: string | null
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          dow: number
+          id?: string
+          is_active?: boolean
+          language?: string
+          last_used_at?: string | null
+          tag?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          dow?: number
+          id?: string
+          is_active?: boolean
+          language?: string
+          last_used_at?: string | null
+          tag?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      crisis_flags: {
+        Row: {
+          category: string
+          created_at: string
+          detector_metadata: Json
+          excerpt: string | null
+          id: string
+          resolution_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          source: string
+          source_ref: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          detector_metadata?: Json
+          excerpt?: string | null
+          id?: string
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          source: string
+          source_ref?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          detector_metadata?: Json
+          excerpt?: string | null
+          id?: string
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          source?: string
+          source_ref?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crisis_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crisis_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_wins: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          user_id: string
+          win_date: string
+          win_text: string | null
+          win_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          user_id: string
+          win_date: string
+          win_text?: string | null
+          win_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          user_id?: string
+          win_date?: string
+          win_text?: string | null
+          win_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_wins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_invitations: {
         Row: {
           created_at: string
@@ -707,6 +1104,255 @@ export type Database = {
           },
         ]
       }
+      fathom_action_items: {
+        Row: {
+          assignee_email: string | null
+          assignee_name: string | null
+          assignee_team: string | null
+          completed: boolean
+          created_at: string
+          description: string
+          fathom_recording_id: string
+          id: string
+          matched_user_id: string | null
+          recording_playback_url: string | null
+          recording_timestamp: string | null
+          user_generated: boolean
+        }
+        Insert: {
+          assignee_email?: string | null
+          assignee_name?: string | null
+          assignee_team?: string | null
+          completed?: boolean
+          created_at?: string
+          description: string
+          fathom_recording_id: string
+          id?: string
+          matched_user_id?: string | null
+          recording_playback_url?: string | null
+          recording_timestamp?: string | null
+          user_generated?: boolean
+        }
+        Update: {
+          assignee_email?: string | null
+          assignee_name?: string | null
+          assignee_team?: string | null
+          completed?: boolean
+          created_at?: string
+          description?: string
+          fathom_recording_id?: string
+          id?: string
+          matched_user_id?: string | null
+          recording_playback_url?: string | null
+          recording_timestamp?: string | null
+          user_generated?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fathom_action_items_fathom_recording_id_fkey"
+            columns: ["fathom_recording_id"]
+            isOneToOne: false
+            referencedRelation: "fathom_recordings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fathom_action_items_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fathom_recording_invitees: {
+        Row: {
+          created_at: string
+          email: string | null
+          email_domain: string | null
+          fathom_recording_id: string
+          id: string
+          is_external: boolean
+          matched_speaker_display_name: string | null
+          matched_user_id: string | null
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          email_domain?: string | null
+          fathom_recording_id: string
+          id?: string
+          is_external?: boolean
+          matched_speaker_display_name?: string | null
+          matched_user_id?: string | null
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          email_domain?: string | null
+          fathom_recording_id?: string
+          id?: string
+          is_external?: boolean
+          matched_speaker_display_name?: string | null
+          matched_user_id?: string | null
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fathom_recording_invitees_fathom_recording_id_fkey"
+            columns: ["fathom_recording_id"]
+            isOneToOne: false
+            referencedRelation: "fathom_recordings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fathom_recording_invitees_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fathom_recordings: {
+        Row: {
+          action_items: Json
+          automation_last_error: string | null
+          automation_processed_at: string | null
+          automation_status: string
+          calendar_invitees_domains_type: string | null
+          call_type: string
+          created_at: string
+          crm_matches: Json
+          event_type: string
+          external_participant_count: number
+          id: string
+          meeting_title: string | null
+          meeting_url: string
+          participant_count: number
+          raw_payload: Json
+          recorded_by_email: string | null
+          recorded_by_email_domain: string | null
+          recorded_by_name: string | null
+          recorded_by_team: string | null
+          recording_end_time: string | null
+          recording_id: string
+          recording_start_time: string | null
+          scheduled_end_time: string | null
+          scheduled_start_time: string | null
+          share_url: string | null
+          source: string
+          summary_markdown: string | null
+          summary_template_name: string | null
+          title: string
+          transcript_language: string | null
+          transcript_segments: Json
+          transcript_text: string
+          updated_at: string
+        }
+        Insert: {
+          action_items?: Json
+          automation_last_error?: string | null
+          automation_processed_at?: string | null
+          automation_status?: string
+          calendar_invitees_domains_type?: string | null
+          call_type?: string
+          created_at?: string
+          crm_matches?: Json
+          event_type?: string
+          external_participant_count?: number
+          id?: string
+          meeting_title?: string | null
+          meeting_url?: string
+          participant_count?: number
+          raw_payload?: Json
+          recorded_by_email?: string | null
+          recorded_by_email_domain?: string | null
+          recorded_by_name?: string | null
+          recorded_by_team?: string | null
+          recording_end_time?: string | null
+          recording_id: string
+          recording_start_time?: string | null
+          scheduled_end_time?: string | null
+          scheduled_start_time?: string | null
+          share_url?: string | null
+          source?: string
+          summary_markdown?: string | null
+          summary_template_name?: string | null
+          title?: string
+          transcript_language?: string | null
+          transcript_segments?: Json
+          transcript_text?: string
+          updated_at?: string
+        }
+        Update: {
+          action_items?: Json
+          automation_last_error?: string | null
+          automation_processed_at?: string | null
+          automation_status?: string
+          calendar_invitees_domains_type?: string | null
+          call_type?: string
+          created_at?: string
+          crm_matches?: Json
+          event_type?: string
+          external_participant_count?: number
+          id?: string
+          meeting_title?: string | null
+          meeting_url?: string
+          participant_count?: number
+          raw_payload?: Json
+          recorded_by_email?: string | null
+          recorded_by_email_domain?: string | null
+          recorded_by_name?: string | null
+          recorded_by_team?: string | null
+          recording_end_time?: string | null
+          recording_id?: string
+          recording_start_time?: string | null
+          scheduled_end_time?: string | null
+          scheduled_start_time?: string | null
+          share_url?: string | null
+          source?: string
+          summary_markdown?: string | null
+          summary_template_name?: string | null
+          title?: string
+          transcript_language?: string | null
+          transcript_segments?: Json
+          transcript_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fathom_webhook_events: {
+        Row: {
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          recording_id: string
+          webhook_id: string
+        }
+        Insert: {
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          recording_id: string
+          webhook_id: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          recording_id?: string
+          webhook_id?: string
+        }
+        Relationships: []
+      }
       finance_categories: {
         Row: {
           admin_id: string
@@ -748,7 +1394,6 @@ export type Database = {
           entry_date: string
           id: string
           receipt_url: string | null
-          sheet_row_number: number | null
           type: string
           updated_at: string
         }
@@ -762,7 +1407,6 @@ export type Database = {
           entry_date?: string
           id?: string
           receipt_url?: string | null
-          sheet_row_number?: number | null
           type?: string
           updated_at?: string
         }
@@ -776,7 +1420,6 @@ export type Database = {
           entry_date?: string
           id?: string
           receipt_url?: string | null
-          sheet_row_number?: number | null
           type?: string
           updated_at?: string
         }
@@ -1079,6 +1722,47 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_plans: {
+        Row: {
+          generated_at: string
+          id: string
+          language: string
+          notes: string
+          plan: Json
+          source: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          language?: string
+          notes?: string
+          plan?: Json
+          source?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          language?: string
+          notes?: string
+          plan?: Json
+          source?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_comments: {
         Row: {
           content: string
@@ -1195,6 +1879,27 @@ export type Database = {
         }
         Relationships: []
       }
+      message_notification_log: {
+        Row: {
+          id: string
+          last_notified_at: string
+          message_count: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_notified_at?: string
+          message_count?: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_notified_at?: string
+          message_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           audio_url: string | null
@@ -1231,6 +1936,90 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
           transcript?: string | null
+        }
+        Relationships: []
+      }
+      personal_video_deliveries: {
+        Row: {
+          delivered_at: string
+          id: string
+          personal_video_id: string
+          trigger: string
+          user_id: string
+          watched_at: string | null
+        }
+        Insert: {
+          delivered_at?: string
+          id?: string
+          personal_video_id: string
+          trigger: string
+          user_id: string
+          watched_at?: string | null
+        }
+        Update: {
+          delivered_at?: string
+          id?: string
+          personal_video_id?: string
+          trigger?: string
+          user_id?: string
+          watched_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_video_deliveries_personal_video_id_fkey"
+            columns: ["personal_video_id"]
+            isOneToOne: false
+            referencedRelation: "personal_videos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_video_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personal_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          is_active: boolean
+          language: string
+          priority: number
+          storage_path: string
+          title: string
+          trigger_tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          language?: string
+          priority?: number
+          storage_path: string
+          title: string
+          trigger_tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          language?: string
+          priority?: number
+          storage_path?: string
+          title?: string
+          trigger_tags?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1358,6 +2147,62 @@ export type Database = {
             columns: ["program_template_id"]
             isOneToOne: false
             referencedRelation: "program_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_drip_emails: {
+        Row: {
+          checkout_url: string | null
+          created_at: string | null
+          day_number: number
+          email_type: string
+          html_body: string | null
+          id: string
+          program_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+          total_days: number
+          user_id: string
+        }
+        Insert: {
+          checkout_url?: string | null
+          created_at?: string | null
+          day_number: number
+          email_type?: string
+          html_body?: string | null
+          id?: string
+          program_id: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          total_days?: number
+          user_id: string
+        }
+        Update: {
+          checkout_url?: string | null
+          created_at?: string | null
+          day_number?: number
+          email_type?: string
+          html_body?: string | null
+          id?: string
+          program_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          total_days?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_drip_emails_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "client_programs"
             referencedColumns: ["id"]
           },
         ]
@@ -1527,7 +2372,7 @@ export type Database = {
       program_videos: {
         Row: {
           category: string
-          description: string
+          description: string | null
           id: string
           module_id: string | null
           program_template_id: string
@@ -1540,7 +2385,7 @@ export type Database = {
         }
         Insert: {
           category?: string
-          description?: string
+          description?: string | null
           id?: string
           module_id?: string | null
           program_template_id: string
@@ -1553,7 +2398,7 @@ export type Database = {
         }
         Update: {
           category?: string
-          description?: string
+          description?: string | null
           id?: string
           module_id?: string | null
           program_template_id?: string
@@ -1722,8 +2567,8 @@ export type Database = {
           instructions_en: string
           program_template_id: string | null
           sort_order: number
-          tip_el: string
-          tip_en: string
+          tip_el: string | null
+          tip_en: string | null
           title_el: string
           title_en: string
         }
@@ -1738,8 +2583,8 @@ export type Database = {
           instructions_en?: string
           program_template_id?: string | null
           sort_order?: number
-          tip_el?: string
-          tip_en?: string
+          tip_el?: string | null
+          tip_en?: string | null
           title_el?: string
           title_en?: string
         }
@@ -1754,8 +2599,8 @@ export type Database = {
           instructions_en?: string
           program_template_id?: string | null
           sort_order?: number
-          tip_el?: string
-          tip_en?: string
+          tip_el?: string | null
+          tip_en?: string | null
           title_el?: string
           title_en?: string
         }
@@ -1921,6 +2766,38 @@ export type Database = {
         }
         Relationships: []
       }
+      streak_state: {
+        Row: {
+          current_streak: number
+          last_active_date: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          last_active_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          last_active_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streak_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity: {
         Row: {
           action_count: number
@@ -2034,7 +2911,7 @@ export type Database = {
       video_modules: {
         Row: {
           created_at: string
-          description: string
+          description: string | null
           id: string
           image_url: string | null
           is_sequential: boolean
@@ -2045,7 +2922,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description?: string
+          description?: string | null
           id?: string
           image_url?: string | null
           is_sequential?: boolean
@@ -2056,7 +2933,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string
+          description?: string | null
           id?: string
           image_url?: string | null
           is_sequential?: boolean
@@ -2071,6 +2948,65 @@ export type Database = {
             columns: ["program_template_id"]
             isOneToOne: false
             referencedRelation: "program_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_check_ins: {
+        Row: {
+          coach_message: string
+          created_at: string
+          data_snapshot: Json
+          due_at: string
+          enrollment_id: string | null
+          generated_at: string
+          id: string
+          language: string
+          report_content: string
+          status: string
+          summary: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          coach_message?: string
+          created_at?: string
+          data_snapshot?: Json
+          due_at: string
+          enrollment_id?: string | null
+          generated_at?: string
+          id?: string
+          language?: string
+          report_content?: string
+          status?: string
+          summary?: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          coach_message?: string
+          created_at?: string
+          data_snapshot?: Json
+          due_at?: string
+          enrollment_id?: string | null
+          generated_at?: string
+          id?: string
+          language?: string
+          report_content?: string
+          status?: string
+          summary?: string
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_check_ins_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "client_program_enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -2104,6 +3040,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _merge_duplicate_profiles: {
+        Args: { _source_user_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      grant_profile_access_system: {
+        Args: { _feature_access?: Json; _user_id: string }
+        Returns: {
+          approved: boolean
+          avatar_url: string | null
+          created_at: string
+          date_of_birth: string | null
+          display_name: string | null
+          email: string | null
+          feature_access: Json
+          height_cm: number | null
+          id: string
+          language: string
+          last_login_at: string | null
+          onboarding_tour_completed: boolean
+          sex: string | null
+          stripe_customer_id: string | null
+          timezone: string | null
+          updated_at: string
+          vocative_name_el: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2122,21 +3090,21 @@ export type Database = {
         Returns: boolean
       }
       list_duplicate_profile_candidates: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
-          auth_approved: boolean | null
-          auth_created_at: string | null
-          auth_display_name: string | null
-          auth_last_login_at: string | null
-          auth_profile_id: string | null
+          auth_approved: boolean
+          auth_created_at: string
+          auth_display_name: string
+          auth_last_login_at: string
+          auth_profile_id: string
           can_merge: boolean
           email: string
-          legacy_approved: boolean | null
-          legacy_created_at: string | null
-          legacy_display_name: string | null
-          legacy_last_login_at: string | null
-          legacy_profile_id: string | null
-          review_reason: string | null
+          legacy_approved: boolean
+          legacy_created_at: string
+          legacy_display_name: string
+          legacy_last_login_at: string
+          legacy_profile_id: string
+          review_reason: string
           source_groups: number
           source_measurements: number
           source_messages: number
@@ -2155,8 +3123,29 @@ export type Database = {
         }
         Returns: undefined
       }
+      match_coach_knowledge: {
+        Args: {
+          filter_language?: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_text: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_title: string
+          source_type: string
+          source_url: string
+        }[]
+      }
       merge_duplicate_profiles_admin: {
         Args: { _source_user_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      merge_feature_access_json: {
+        Args: { _source: Json; _target: Json }
         Returns: Json
       }
       use_invite_token: {
@@ -2291,6 +3280,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "user"],

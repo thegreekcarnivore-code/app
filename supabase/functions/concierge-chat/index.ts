@@ -1,5 +1,130 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createOpenAIEmbeddings } from "../_shared/openai.ts";
+
+const CRISIS_PATTERNS: { category: string; severity: "low" | "medium" | "high"; patterns: RegExp[] }[] = [
+  {
+    category: "self_harm",
+    severity: "high",
+    patterns: [
+      /\b(αυτοκτον\w*|να σκοτωθ\w+|να πεθάν\w+|δεν θέλω να ζω|να τελειώσω τη ζωή\w*)\b/i,
+      /\b(suicid\w*|kill myself|end my life|don'?t want to live|hurt myself)\b/i,
+    ],
+  },
+  {
+    category: "eating_disorder",
+    severity: "high",
+    patterns: [
+      /\b(δεν τρώω καθόλου|κάνω εμετό|προκαλώ εμετό|μου προκαλεί εμετό|νηστεία \d+ ημερ\w*)\b/i,
+      /\b(purg\w+|making myself vomit|stopped eating|haven'?t eaten in (days|weeks)|anorexi\w*|bulimi\w*)\b/i,
+    ],
+  },
+  {
+    category: "medical_emergency",
+    severity: "high",
+    patterns: [
+      /\b(πόνος στο στήθος|χάνω τις αισθήσεις|αιμορραγ\w+ έντον\w+|δεν αναπνέ\w+)\b/i,
+      /\b(chest pain|passing out|severe bleeding|can'?t breathe|seizure)\b/i,
+    ],
+  },
+];
+
+function detectCrisis(text: string): { category: string; severity: string; excerpt: string } | null {
+  if (!text) return null;
+  for (const group of CRISIS_PATTERNS) {
+    for (const pattern of group.patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const start = Math.max(0, (match.index ?? 0) - 60);
+        const end = Math.min(text.length, (match.index ?? 0) + match[0].length + 60);
+        return { category: group.category, severity: group.severity, excerpt: text.slice(start, end) };
+      }
+    }
+  }
+  return null;
+}
+
+async function logCrisisFlag(userId: string, category: string, severity: string, excerpt: string) {
+  try {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await sb.from("crisis_flags").insert({
+      user_id: userId,
+      source: "concierge_chat",
+      severity,
+      category,
+      excerpt,
+      detector_metadata: { detector: "regex_v1" },
+    });
+  } catch (e) {
+    console.error("Failed to log crisis flag:", e);
+  }
+}
+
+function buildCrisisResponse(lang: string): string {
+  if (lang === "el") {
+    return [
+      "Ακούω αυτό που μου γράφεις και θέλω να το πάρω σοβαρά.",
+      "Δεν είμαι ο σωστός χώρος για αυτό. Σε παρακαλώ μίλησε **τώρα** με κάποιον που μπορεί να βοηθήσει:",
+      "",
+      "• **Γραμμή Ζωής 1018** (24/7, δωρεάν) — Πρόληψη αυτοκτονίας",
+      "• **Κέντρο Ημέρας ΚΛΙΜΑΚΑ 210 3417 162**",
+      "• Σε άμεσο κίνδυνο: **112** (ΕΚΑΒ)",
+      "",
+      "Για ζητήματα διατροφικής διαταραχής: **Ανάσα 210 7257 217**.",
+      "",
+      "Αν είσαι ασφαλής αυτή τη στιγμή και θες να συνεχίσουμε για τη διατροφή σου αργότερα, θα είμαι εδώ. Πρώτα όμως, σε παρακαλώ κάλεσε.",
+    ].join("\n");
+  }
+  return [
+    "I hear what you're telling me and I want to take it seriously.",
+    "I'm not the right place for this. Please reach out **now** to someone who can help:",
+    "",
+    "• **Suicide & Crisis Lifeline (US): 988** (24/7, free)",
+    "• **International Association for Suicide Prevention**: https://www.iasp.info/resources/Crisis_Centres/",
+    "• In immediate danger: call your local emergency number (**112** in EU, **911** in US)",
+    "",
+    "If you're safe right now and want to continue talking about your nutrition later, I'll be here. But please call first.",
+  ].join("\n");
+}
+
+function extractLastUserText(messages: ValidatedMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i];
+    if (m.role !== "user") continue;
+    if (typeof m.content === "string") return m.content;
+    const text = m.content
+      .filter((p): p is TextPart => p.type === "text")
+      .map((p) => p.text)
+      .join("\n");
+    if (text) return text;
+  }
+  return "";
+}
+
+async function fetchCoachContext(query: string, lang: string): Promise<string> {
+  if (!query || query.length < 5) return "";
+  try {
+    const embeddings = await createOpenAIEmbeddings([query]);
+    const queryEmbedding = embeddings[0];
+    if (!queryEmbedding) return "";
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data, error } = await sb.rpc("match_coach_knowledge", {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.7,
+      match_count: 8,
+      filter_language: lang === "el" ? "el" : null,
+    });
+    if (error || !Array.isArray(data) || data.length === 0) return "";
+    const blocks = data.map((row: { source_type: string; source_title: string | null; chunk_text: string }, idx: number) => {
+      const label = row.source_title ? `${row.source_type} — ${row.source_title}` : row.source_type;
+      return `[${idx + 1}] (${label})\n${row.chunk_text}`;
+    });
+    return `\n\nALEX'S OWN WORDS — RETRIEVED COACHING CONTEXT:\nUse the passages below to ground your reply. Mirror the tone, examples, and phrasing. Do not cite indices to the user.\n\n${blocks.join("\n\n")}\n\n— END OF RETRIEVED CONTEXT —\n`;
+  } catch (e) {
+    console.error("fetchCoachContext failed:", e);
+    return "";
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +171,7 @@ function validateInput(body: unknown): { messages: ValidatedMessage[]; location?
 
   let validatedMode: string | undefined;
   if (mode != null) {
-    if (typeof mode !== "string" || !["delivery", "shopping", "general"].includes(mode)) validatedMode = undefined;
+    if (typeof mode !== "string" || !["delivery", "shopping", "general", "coach"].includes(mode)) validatedMode = undefined;
     else validatedMode = mode;
   }
 
@@ -302,7 +427,56 @@ STRUCTURED FORMAT — when recommending, output each as a JSON block:
 
 Tone: Direct, calm, confident, knowledgeable.`;
 
-    const systemPrompt = mode === "shopping" ? shoppingSystemPrompt : mode === "delivery" ? deliverySystemPrompt : generalSystemPrompt;
+    let systemPrompt: string;
+    if (mode === "coach") {
+      const lastUserText = extractLastUserText(messages);
+      const crisis = detectCrisis(lastUserText);
+      if (crisis) {
+        await logCrisisFlag(userId, crisis.category, crisis.severity, crisis.excerpt);
+        const safetyText = buildCrisisResponse(lang);
+        const sseFrames = [
+          `data: ${JSON.stringify({ choices: [{ delta: { role: "assistant", content: safetyText } }] })}\n\n`,
+          "data: [DONE]\n\n",
+        ].join("");
+        return new Response(sseFrames, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+
+      const ragContext = await fetchCoachContext(lastUserText, lang);
+
+      const coachSystemPrompt = `${clientProfile}You are the AI Concierge of "The Greek Carnivore" — speaking AS Alex (Αλέξανδρος Αδαμαντιάδης) inside his coaching app.
+
+${languageInstruction}
+
+WHO YOU ARE:
+- Alex's voice: direct, calm, no fluff, no diet-bro hype, never preachy.
+- You coach the carnivore / meat-based / low-carb path. The user is on the Único program (€47/mo) — they already have access to everything.
+- You answer in first person ("όταν έκανα...", "θα σου πω αυτό που λέω σε όλους..."). You do NOT speak as a generic assistant.
+
+VOICE & PHRASING RULES (HARD):
+- Greek by default. Keep double accents (ενέργειά σου, NOT ενέργεια σου).
+- Noun-gender agreement enforced (οι νευροδιαβιβαστές, NEVER τα νευροδιαβιβαστές).
+- Forbidden phrases: "πάτα ακολούθησε", any motivational-coach clichés, calorie counting, "keto" framing.
+- Numbers in body text → spelled out in Greek (τρεις, NOT 3) when appearing in coaching prose.
+- One CTA per reply max. Never sell. Never offer 1:1 calls or paid upgrades — the único program is the only thing.
+
+WHAT YOU DO:
+- Answer carnivore questions (food, electrolytes, weekend protocol, social situations, plateaus, sleep, energy, training, women's hormones, menopause, satiation, cravings, fasting).
+- Reference the user's data when relevant (food journal, measurements, streak) if visible in context.
+- Point them to specific app features by name when useful: Πρόοδος (measurements/photos), Μέθοδος (videos + book), Κοινότητα (community), Σήμερα (today's prompts).
+- If the question is medical/diagnostic, say honestly "this is for a doctor" and pivot back to lifestyle support.
+
+WHAT YOU NEVER DO:
+- Never invent dishes, restaurants, or specific shop products in coach mode. Defer those to the discovery tabs.
+- Never claim to be human. If asked, you're "ο AI Σύμβουλος που μιλά με τη φωνή του Αλέξανδρου, εκπαιδευμένος πάνω σε χιλιάδες ώρες coaching".
+- Never say "as an AI" disclaimer dance. Just answer.
+${ragContext}
+Tone: Direct. Compassionate. Confident. Like a friend who's been there. No emojis. No bullet-list overload — write like a person, not a corporate FAQ.`;
+      systemPrompt = coachSystemPrompt;
+    } else {
+      systemPrompt = mode === "shopping" ? shoppingSystemPrompt : mode === "delivery" ? deliverySystemPrompt : generalSystemPrompt;
+    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

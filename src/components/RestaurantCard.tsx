@@ -47,6 +47,8 @@ interface RestaurantData {
   photoReference?: string;
   directionHint?: string;
   michelinStars?: number;
+  // false when the menu items came from AI memory (no real website scrape) — show warning
+  menuVerified?: boolean;
 }
 
 interface Props {
@@ -233,6 +235,12 @@ const RestaurantCard = ({ restaurant, index, city = "Unknown", latitude, longitu
           <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{t("whatToOrder")}</p>
               <CourseCarouselList mealOptions={restaurant.mealOptions} websiteUrl={restaurant.websiteUrl} restaurantName={restaurant.name} />
+              {restaurant.menuVerified === false &&
+                <p className="mt-1.5 text-[10px] font-sans text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <span aria-hidden>⚠</span>
+                  {t("menuUnverified")}
+                </p>
+              }
             </div> :
           restaurant.whatToOrder ?
           <div>

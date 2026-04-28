@@ -74,6 +74,10 @@ const translations = {
   whatToOrder: { en: "What to order", el: "Τι να παραγγειλεις" },
   orderThis: { en: "Order this", el: "Παραγγειλε αυτο" },
   howToOrder: { en: "How to order", el: "Πως να παραγγειλεις" },
+  menuUnverified: {
+    en: "Menu based on AI estimate — ask the restaurant to confirm dishes.",
+    el: "Μενου απο εκτιμηση AI — ρωτησε το εστιατοριο για επιβεβαιωση των πιατων."
+  },
   appleMaps: { en: "Apple Maps", el: "Apple Maps" },
   googleMaps: { en: "Google Maps", el: "Google Maps" },
   uber: { en: "Uber", el: "Uber" },

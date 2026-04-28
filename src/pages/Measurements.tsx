@@ -14,6 +14,7 @@ import {
   Camera,
   ChevronRight,
   HeartPulse,
+  LayoutPanelLeft,
   Plus,
   Scale,
   Sparkles,
@@ -25,6 +26,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import MeasurementForm from "@/components/measurements/MeasurementForm";
 import BodyDashboard from "@/components/measurements/BodyDashboard";
@@ -140,6 +149,10 @@ const tabDescriptions: Record<MeasurementTabKey, { en: string; el: string }> = {
     en: "Progress photos, comparison cadence, and visual accountability.",
     el: "Φωτογραφίες προόδου, ρυθμός σύγκρισης και οπτική συνέπεια.",
   },
+  journal: {
+    en: "Wellness journal entries — daily reflections and notes.",
+    el: "Καταγραφές ημερολογίου ευεξίας — καθημερινές σκέψεις και σημειώσεις.",
+  },
 };
 
 const toDayStart = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate());
@@ -209,6 +222,9 @@ const Measurements = ({ userId }: MeasurementsProps) => {
   const [journalOpen, setJournalOpen] = useState(false);
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(searchParams.get("checkIn"));
+  // Controls the mobile-only left-slide Sheet that shows the insight sidebar.
+  // Desktop (lg+) always shows it inline, so this state is only read on mobile.
+  const [insightsSheetOpen, setInsightsSheetOpen] = useState(false);
   const targetUserId = userId || user?.id;
   const isGreek = lang === "el";
 
@@ -612,270 +628,253 @@ const Measurements = ({ userId }: MeasurementsProps) => {
     },
   ];
 
-  return (
-    <div className="px-4 pt-6 pb-24 space-y-5">
-      <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(135deg,hsl(var(--beige))_0%,hsl(var(--background))_100%)] dark:bg-card dark:[background-image:none] p-5 shadow-sm">
-        <div className="space-y-5">
-          <div
-            data-guide="measurements-weekly-checkin"
-            onClick={() => {
-              if (selectedWeeklyCheckIn) {
-                setSelectedCheckInId(selectedWeeklyCheckIn.id);
-                setCheckInDialogOpen(true);
-              }
-            }}
-            className={cn(
-              "rounded-[1.75rem] border border-gold/25 bg-background/85 p-4 md:p-5",
-              selectedWeeklyCheckIn && "cursor-pointer transition-all hover:border-gold/40 hover:shadow-sm",
-            )}
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-gold">
-                  {isGreek ? "Εβδομαδιαίο check-in" : "Weekly Check-in"}
-                </p>
-                <h2 className="font-serif text-xl font-semibold text-foreground">
-                  {latestWeeklyCheckIn
-                    ? isGreek
-                      ? "Το εβδομαδιαίο check-in σου είναι έτοιμο"
-                      : "Your weekly check-in is ready"
-                    : isGreek
-                      ? "Προετοίμασε την επόμενη εβδομαδιαία ανάλυση"
-                      : "Prepare your next weekly review"}
-                </h2>
-                <p className="max-w-3xl text-sm font-sans leading-relaxed text-muted-foreground">
-                  {weeklyCheckInLoading
-                    ? isGreek
-                      ? "Φορτώνουμε το τελευταίο σου εβδομαδιαίο check-in..."
-                      : "Loading your latest weekly check-in..."
-                    : latestWeeklyCheckIn
-                    ? latestWeeklyCheckIn.summary
-                    : nextCheckInLabel
-                      ? isGreek
-                        ? `Μέχρι ${nextCheckInLabel} χρειάζεται να συμπληρώσεις σώμα, φαγητό και φωτογραφίες ώστε η εβδομαδιαία ανάλυση να βγει ολοκληρωμένη και χρήσιμη.`
-                        : `Before ${nextCheckInLabel}, make sure body data, food logs, and progress photos are up to date so the weekly review is accurate and useful.`
-                      : isGreek
-                        ? "Η εβδομαδιαία ροή δεν έχει ενεργοποιηθεί ακόμη. Μόλις οριστεί η πρώτη προθεσμία, εδώ θα δεις τι πρέπει να συμπληρώσεις."
-                        : "Your weekly flow is not active yet. As soon as the first deadline is scheduled, you will see exactly what needs to be completed here."}
-                </p>
-                {(latestWeeklyCheckIn || nextCheckInLabel || nextCheckInCountdownLabel) && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-sans text-muted-foreground">
-                    {latestWeeklyCheckIn && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2.5 py-1">
-                        <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                        {isGreek
-                          ? `Αφορά την εβδομάδα έως ${latestCheckInDateLabel}`
-                          : `Covers the week ending ${latestCheckInDateLabel}`}
-                      </span>
-                    )}
-                    {nextCheckInLabel && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2.5 py-1">
-                        <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                        {isGreek
-                          ? `Προθεσμία: ${nextCheckInLabel}`
-                          : `Deadline: ${nextCheckInLabel}`}
-                      </span>
-                    )}
-                    {nextCheckInCountdownLabel && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-gold/25 bg-gold/10 px-2.5 py-1 text-foreground">
-                        <Sparkles className="h-3.5 w-3.5 text-gold" />
-                        {nextCheckInCountdownLabel}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+  // ---------------------------------------------------------------------------
+  // LAYOUT: measurements-first, insights in a left sidebar.
+  //
+  // Why: users came here to LOG a measurement or READ their latest numbers.
+  // Previously the 4 summary cards + coaching-focus hero + tracking guides
+  // pushed the actual dashboards (BodyDashboard / FoodDashboard / PhotosDashboard)
+  // well below the fold. Now:
+  //   - A compact weekly check-in banner stays at the top (action card, not hero)
+  //   - Tab switcher is immediately below
+  //   - Active tab content (the real measurements UI) fills the main column
+  //   - All the "insight / summary" cards go into a LEFT SIDEBAR visible on
+  //     desktop (lg+). On mobile, a single "Insights" button opens them in a
+  //     left-slide Sheet so everything is still one tap away.
+  // ---------------------------------------------------------------------------
 
-              <div className="flex flex-col gap-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (selectedWeeklyCheckIn) {
-                      setSelectedCheckInId(selectedWeeklyCheckIn.id);
-                      setCheckInDialogOpen(true);
-                    } else {
-                      setActiveTab("body");
-                      setFormOpen(true);
-                    }
-                  }}
-                  disabled={weeklyCheckInLoading}
-                  className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-gold-foreground hover:bg-gold/90"
-                >
-                  {selectedWeeklyCheckIn
-                    ? (isGreek ? "Άνοιγμα ανάλυσης" : "Open analysis")
-                    : (isGreek ? "Νέα μέτρηση σώματος" : "Add body check-in")}
-                </Button>
-                {selectedWeeklyCheckIn?.coach_message ? (
-                  <p className="max-w-xs rounded-2xl border border-border/70 bg-background/80 px-3 py-2 text-xs font-sans leading-relaxed text-muted-foreground">
-                    {selectedWeeklyCheckIn.coach_message}
-                  </p>
-                ) : nextCheckInLabel ? (
-                  <div className="max-w-xs rounded-2xl border border-border/70 bg-background/80 px-3 py-3 text-xs font-sans text-muted-foreground">
-                    <p className="font-semibold text-foreground">
-                      {isGreek ? "Για να εμφανιστεί η ανάλυση:" : "To unlock the review:"}
-                    </p>
-                    <div className="mt-2 space-y-2">
-                      {weeklyPrepChecklist.map((item) => (
-                        <div key={item} className="flex items-start gap-2">
-                          <ChevronRight className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gold" />
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
+  // The insight sidebar content is rendered twice (desktop aside + mobile sheet)
+  // so we build the JSX once and reuse it. Keep `key` attributes stable so React
+  // doesn't thrash when remounting between the two containers.
+  const insightSidebarBlock = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.24em] text-gold">
+          {isGreek ? "Κέντρο προόδου" : "Progress center"}
+        </p>
+        <h2 className="font-serif text-lg font-semibold text-foreground">
+          {isGreek ? "Μετρήσεις & Ερμηνεία" : "Measurements & Coaching Insight"}
+        </h2>
+        <p className="text-xs font-sans leading-relaxed text-muted-foreground">
+          {overviewLoading
+            ? isGreek ? "Ανάλυση..." : "Analyzing..."
+            : insightState.latestMeasurement
+              ? isGreek
+                ? `Τελευταία καταγραφή ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "σήμερα" })}`
+                : `Last measurement ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "today" })}`
+              : isGreek
+                ? "Βάλε την πρώτη σου μέτρηση για να ξεκινήσει η ανάλυση."
+                : "Log your first measurement so the analysis can start."}
+        </p>
+      </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-gold">
-              {isGreek ? "Κέντρο προόδου" : "Progress center"}
-            </p>
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-2">
-                <h1 className="font-serif text-3xl font-semibold text-foreground">
-                  {isGreek ? "Μετρήσεις & Ερμηνεία" : "Measurements & Coaching Insight"}
-                </h1>
-                <p className="max-w-2xl text-sm font-sans leading-relaxed text-muted-foreground">
-                  {isGreek
-                    ? "Όχι μόνο καταγραφή. Εδώ βλέπεις τι αλλάζει, τι χρειάζεται προσοχή και ποιο είναι το επόμενο καλύτερο βήμα."
-                    : "Not just logging. This is where your data starts to show what is changing, what needs attention, and what to do next."}
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-gold/25 bg-background/80 px-3 py-2 text-xs font-sans font-medium text-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-gold" />
-                {overviewLoading
-                  ? isGreek ? "Ανάλυση..." : "Analyzing..."
-                  : insightState.latestMeasurement
-                    ? isGreek
-                      ? `Τελευταία καταγραφή ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "σήμερα" })}`
-                      : `Last measurement ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "today" })}`
-                    : isGreek
-                      ? "Βάλε την πρώτη σου μέτρηση για να ξεκινήσει η ανάλυση"
-                      : "Log your first measurement so the analysis can start"}
-              </div>
-            </div>
-          </div>
+      {/* Coaching focus — the single most actionable next step */}
+      <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4">
+        <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
+          {isGreek ? "Σημερινή καθοδήγηση" : "Coaching focus"}
+        </p>
+        <h3 className="mt-2 font-serif text-base font-semibold text-foreground">
+          {insightState.focus.title}
+        </h3>
+        <p className="mt-1 text-xs font-sans leading-relaxed text-muted-foreground">
+          {insightState.focus.body}
+        </p>
+        <button
+          onClick={() => {
+            setActiveTab(insightState.focus.tab);
+            if (insightState.focus.tab === "body") setFormOpen(true);
+            setInsightsSheetOpen(false);
+          }}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gold px-3 py-2 text-xs font-sans font-semibold text-gold-foreground transition-all hover:opacity-90"
+        >
+          {insightState.focus.action}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                key: "body",
-                icon: Scale,
-                title: isGreek ? "Καταγραφή Σώματος" : "Body Check-In",
-                headline: bodySummaryTitle,
-                detail: bodySummaryDetail,
-              },
-              {
-                key: "wellness",
-                icon: HeartPulse,
-                title: isGreek ? "Εικόνα Ευεξίας" : "Wellness Snapshot",
-                headline: wellnessSummaryTitle,
-                detail: wellnessSummaryDetail,
-              },
-              {
-                key: "food",
-                icon: Apple,
-                title: isGreek ? "Ρυθμός Διατροφής" : "Nutrition Rhythm",
-                headline: nutritionSummaryTitle,
-                detail: nutritionSummaryDetail,
-              },
-              {
-                key: "photos",
-                icon: Camera,
-                title: isGreek ? "Ρυθμός Φωτογραφιών" : "Photo Cadence",
-                headline: photosSummaryTitle,
-                detail: photosSummaryDetail,
-              },
-            ].map(({ key, icon: Icon, title, headline, detail }) => (
-              <div key={key} className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
-                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 text-gold">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <p className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      {/* 4 summary cards stacked vertically for the sidebar */}
+      <div className="space-y-2">
+        {[
+          {
+            key: "body",
+            icon: Scale,
+            title: isGreek ? "Καταγραφή Σώματος" : "Body Check-In",
+            headline: bodySummaryTitle,
+            detail: bodySummaryDetail,
+          },
+          {
+            key: "wellness",
+            icon: HeartPulse,
+            title: isGreek ? "Εικόνα Ευεξίας" : "Wellness Snapshot",
+            headline: wellnessSummaryTitle,
+            detail: wellnessSummaryDetail,
+          },
+          {
+            key: "food",
+            icon: Apple,
+            title: isGreek ? "Ρυθμός Διατροφής" : "Nutrition Rhythm",
+            headline: nutritionSummaryTitle,
+            detail: nutritionSummaryDetail,
+          },
+          {
+            key: "photos",
+            icon: Camera,
+            title: isGreek ? "Ρυθμός Φωτογραφιών" : "Photo Cadence",
+            headline: photosSummaryTitle,
+            detail: photosSummaryDetail,
+          },
+        ].map(({ key, icon: Icon, title, headline, detail }) => (
+          <div key={key} className="rounded-xl border border-border/70 bg-background/80 p-3 shadow-sm">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
+                <Icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   {title}
                 </p>
-                <p className="mt-2 font-serif text-lg font-semibold text-foreground">
+                <p className="mt-0.5 font-serif text-sm font-semibold text-foreground leading-tight">
                   {headline}
                 </p>
-                <p className="mt-1 text-sm font-sans leading-relaxed text-muted-foreground">
+                <p className="mt-0.5 text-[11px] font-sans leading-snug text-muted-foreground">
                   {detail}
                 </p>
               </div>
-            ))}
-          </div>
-
-          <div className="rounded-[1.75rem] border border-gold/25 bg-background/80 p-4 md:p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-sans font-semibold uppercase tracking-[0.24em] text-gold">
-                  {isGreek ? "Σημερινή καθοδήγηση" : "Coaching focus"}
-                </p>
-                <h2 className="font-serif text-xl font-semibold text-foreground">
-                  {insightState.focus.title}
-                </h2>
-                <p className="max-w-2xl text-sm font-sans leading-relaxed text-muted-foreground">
-                  {insightState.focus.body}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setActiveTab(insightState.focus.tab);
-                  if (insightState.focus.tab === "body") setFormOpen(true);
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-3 text-sm font-sans font-semibold text-gold-foreground transition-all hover:opacity-90"
-              >
-                {insightState.focus.action}
-                <ChevronRight className="h-4 w-4" />
-              </button>
             </div>
           </div>
-        </div>
-      </section>
+        ))}
+      </div>
 
-      <section className="space-y-3">
-        <div className="space-y-1">
-          <h2 className="font-serif text-lg font-semibold text-foreground">
-            {isGreek ? "Ένα σύστημα προόδου" : "One progress system"}
-          </h2>
-          <p className="text-sm font-sans text-muted-foreground">
-            {isGreek
-              ? "Το σώμα, το φαγητό και οι φωτογραφίες δεν είναι ξεχωριστά εργαλεία. Μαζί δίνουν το πιο καθαρό coaching context."
-              : "Body, food, and photos are not separate tools. Together they create the clearest coaching context."}
-          </p>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-3">
+      {/* Quick tab switcher — in sidebar so clicking a guide also switches tab */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
+          {isGreek ? "Πλοήγηση προόδου" : "Progress navigation"}
+        </p>
+        <div className="space-y-1.5">
           {trackingGuides.map((guide) => (
             <button
               key={guide.key}
               onClick={() => {
                 setActiveTab(guide.key);
                 if (guide.key === "body") setFormOpen(true);
+                setInsightsSheetOpen(false);
               }}
               className={cn(
-                "rounded-[1.5rem] border p-4 text-left transition-all",
+                "w-full rounded-xl border p-3 text-left transition-all",
                 activeTab === guide.key
                   ? "border-gold/40 bg-gold/10 shadow-sm"
-                  : "border-border bg-card hover:border-border/80 hover:shadow-sm",
+                  : "border-border bg-card hover:border-border/80",
               )}
             >
-              <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-gold">
                 {guide.title}
               </p>
-              <p className="mt-2 font-serif text-lg font-semibold text-foreground">{guide.status}</p>
-              <p className="mt-1 text-sm font-sans leading-relaxed text-muted-foreground">{guide.detail}</p>
-              <span className="mt-4 inline-flex items-center gap-1 font-sans text-xs font-semibold text-gold">
-                {guide.action}
-                <ChevronRight className="h-3.5 w-3.5" />
-              </span>
+              <p className="mt-1 font-serif text-sm font-semibold text-foreground">{guide.status}</p>
+              <p className="mt-0.5 text-[11px] font-sans leading-snug text-muted-foreground">{guide.detail}</p>
             </button>
           ))}
         </div>
+      </div>
 
-        <div className="flex gap-1.5">
-          {tabs.map(({ key, icon: Icon, en, el: elLabel }) => (
+      {/* Weekly check-in history list — so clients can open any of the last 12 weeks */}
+      {weeklyCheckInOverview?.checkIns && weeklyCheckInOverview.checkIns.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
+            {isGreek ? "Ιστορικό check-ins" : "Check-in history"}
+          </p>
+          <div className="space-y-1.5">
+            {weeklyCheckInOverview.checkIns.slice(0, 6).map((checkIn) => (
+              <button
+                key={checkIn.id}
+                onClick={() => {
+                  setSelectedCheckInId(checkIn.id);
+                  setCheckInDialogOpen(true);
+                  setInsightsSheetOpen(false);
+                }}
+                className="w-full rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-gold/40 hover:bg-gold/5"
+              >
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-3.5 w-3.5 flex-shrink-0 text-gold" />
+                  <p className="text-[11px] font-sans font-semibold text-foreground">
+                    {new Intl.DateTimeFormat(isGreek ? "el-GR" : "en-GB", {
+                      day: "numeric",
+                      month: "short",
+                    }).format(new Date(checkIn.week_end))}
+                  </p>
+                </div>
+                <p className="mt-1 line-clamp-2 text-[11px] font-sans leading-snug text-muted-foreground">
+                  {checkIn.summary}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="px-4 pt-6 pb-24 space-y-5">
+      {/* Compact weekly check-in banner — no more full-hero gradient. Keeps the
+          action button visible but frees the fold for the actual measurements. */}
+      <section
+        data-guide="measurements-weekly-checkin"
+        onClick={() => {
+          if (selectedWeeklyCheckIn) {
+            setSelectedCheckInId(selectedWeeklyCheckIn.id);
+            setCheckInDialogOpen(true);
+          }
+        }}
+        className={cn(
+          "rounded-2xl border border-gold/25 bg-gold/5 p-4",
+          selectedWeeklyCheckIn && "cursor-pointer transition-all hover:border-gold/40 hover:shadow-sm",
+        )}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.24em] text-gold">
+              {isGreek ? "Εβδομαδιαίο check-in" : "Weekly Check-in"}
+            </p>
+            <h2 className="font-serif text-base font-semibold text-foreground">
+              {latestWeeklyCheckIn
+                ? isGreek ? "Το εβδομαδιαίο check-in σου είναι έτοιμο" : "Your weekly check-in is ready"
+                : isGreek ? "Προετοίμασε την επόμενη εβδομαδιαία ανάλυση" : "Prepare your next weekly review"}
+            </h2>
+            <p className="line-clamp-2 text-xs font-sans leading-relaxed text-muted-foreground">
+              {weeklyCheckInLoading
+                ? isGreek ? "Φορτώνουμε..." : "Loading..."
+                : latestWeeklyCheckIn
+                  ? latestWeeklyCheckIn.summary
+                  : nextCheckInCountdownLabel || (isGreek ? "Συνέχισε να καταγράφεις για την εβδομαδιαία σου ανάλυση." : "Keep logging so your weekly review has accurate data.")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (selectedWeeklyCheckIn) {
+                setSelectedCheckInId(selectedWeeklyCheckIn.id);
+                setCheckInDialogOpen(true);
+              } else {
+                setActiveTab("body");
+                setFormOpen(true);
+              }
+            }}
+            disabled={weeklyCheckInLoading}
+            className="flex-shrink-0 rounded-xl bg-gold px-4 py-2.5 text-xs font-semibold text-gold-foreground hover:bg-gold/90"
+          >
+            {selectedWeeklyCheckIn
+              ? (isGreek ? "Άνοιγμα ανάλυσης" : "Open analysis")
+              : (isGreek ? "Νέα μέτρηση" : "Add check-in")}
+          </Button>
+        </div>
+      </section>
+
+      {/* Tab switcher + Insights trigger — tab switcher is primary, insights is
+          secondary (only visible on mobile — on desktop the sidebar is already there). */}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 gap-2">
+          {tabs.map(({ key, icon: Icon, en, el }) => (
             <button
               key={key}
               data-guide={`measurements-${key}`}
@@ -894,25 +893,59 @@ const Measurements = ({ userId }: MeasurementsProps) => {
               )}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{lang === "en" ? en : elLabel}</span>
+              <span className="truncate">{isGreek ? el : en}</span>
             </button>
           ))}
         </div>
+        {/* Mobile-only Insights button that opens the sidebar content in a left-slide sheet */}
+        <Sheet open={insightsSheetOpen} onOpenChange={setInsightsSheetOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="lg:hidden inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-2.5 font-sans text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              aria-label={isGreek ? "Άνοιγμα ανάλυσης" : "Open insights"}
+            >
+              <LayoutPanelLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">{isGreek ? "Ανάλυση" : "Insights"}</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[85vw] max-w-sm overflow-y-auto">
+            <SheetHeader className="pb-4">
+              <SheetTitle className="font-serif text-xl">
+                {isGreek ? "Ανάλυση προόδου" : "Progress insights"}
+              </SheetTitle>
+              <SheetDescription className="text-xs">
+                {isGreek
+                  ? "Όλα τα σημεία προσοχής και η συνολική εικόνα."
+                  : "Everything that needs attention and the big picture."}
+              </SheetDescription>
+            </SheetHeader>
+            {insightSidebarBlock}
+          </SheetContent>
+        </Sheet>
+      </div>
 
-        <div className="rounded-[1.5rem] border border-border/70 bg-card p-4">
-          <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
-            {isGreek ? "Τρέχον focus" : "Current focus"}
-          </p>
-          <h3 className="mt-2 font-serif text-xl font-semibold text-foreground">{tabHeader[lang]}</h3>
-          <p className="mt-1 text-sm font-sans leading-relaxed text-muted-foreground">
-            {activeTab === "body"
-              ? (isGreek ? "Πρόσθεσε ή ανανέωσε τη μέτρηση όταν χρειάζεται πιο καθαρή εικόνα σε βάρος, μέση και ευεξία." : "Add or refresh a body check-in when you need a cleaner read on weight, waist, and wellness.")
-              : activeTab === "food"
-                ? (isGreek ? "Χρησιμοποίησε το food log για να δεις αν η καθημερινή εκτέλεση στηρίζει όντως το αποτέλεσμα." : "Use the food log to see whether daily execution is actually supporting the result.")
-                : (isGreek ? "Οι φωτογραφίες κρατούν οπτική λογοδοσία και δείχνουν αλλαγές που οι αριθμοί συχνά κρύβουν." : "Photos keep visual accountability high and reveal changes that numbers often hide.")}
-          </p>
-        </div>
-      </section>
+      {/* Desktop 2-column layout: sidebar on the LEFT, measurements on the RIGHT. */}
+      <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+        <aside className="hidden lg:block lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
+          {insightSidebarBlock}
+        </aside>
+
+        <main className="space-y-4 min-w-0">
+          {/* Tab header — keeps context for the active section */}
+          <div className="rounded-2xl border border-border/70 bg-card p-4">
+            <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-gold">
+              {isGreek ? "Τρέχον focus" : "Current focus"}
+            </p>
+            <h3 className="mt-1 font-serif text-xl font-semibold text-foreground">{tabHeader[lang]}</h3>
+            <p className="mt-1 text-sm font-sans leading-relaxed text-muted-foreground">
+              {activeTab === "body"
+                ? (isGreek ? "Πρόσθεσε ή ανανέωσε τη μέτρηση όταν χρειάζεται πιο καθαρή εικόνα σε βάρος, μέση και ευεξία." : "Add or refresh a body check-in when you need a cleaner read on weight, waist, and wellness.")
+                : activeTab === "food"
+                  ? (isGreek ? "Χρησιμοποίησε το food log για να δεις αν η καθημερινή εκτέλεση στηρίζει όντως το αποτέλεσμα." : "Use the food log to see whether daily execution is actually supporting the result.")
+                  : (isGreek ? "Οι φωτογραφίες κρατούν οπτική λογοδοσία και δείχνουν αλλαγές που οι αριθμοί συχνά κρύβουν." : "Photos keep visual accountability high and reveal changes that numbers often hide.")}
+            </p>
+          </div>
 
       {activeTab === "body" && (
         <section className="space-y-4">
@@ -1047,6 +1080,8 @@ const Measurements = ({ userId }: MeasurementsProps) => {
           <PhotosDashboard userId={userId} />
         </section>
       )}
+        </main>
+      </div>
 
       <WellnessJournal
         open={journalOpen}
@@ -1058,8 +1093,12 @@ const Measurements = ({ userId }: MeasurementsProps) => {
       />
 
       <Dialog open={checkInDialogOpen} onOpenChange={setCheckInDialogOpen}>
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden">
-          <DialogHeader className="space-y-2">
+        {/* flex flex-col + flex-1/min-h-0 on the scroll child is what makes the dialog
+            body actually scrollable. The previous `overflow-hidden` clipped content
+            without giving the inner div bounded height, so users couldn't scroll the
+            weekly analysis when it exceeded 85vh. */}
+        <DialogContent className="max-h-[85vh] max-w-3xl flex flex-col">
+          <DialogHeader className="space-y-2 flex-shrink-0">
             <DialogTitle className="font-serif text-2xl">
               {isGreek ? "Το 7ήμερο check-in σου" : "Your 7-day check-in"}
             </DialogTitle>
@@ -1075,7 +1114,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
           </DialogHeader>
 
           {selectedWeeklyCheckIn ? (
-            <div className="space-y-4 overflow-y-auto pr-1">
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0">
               <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4">
                 <p className="text-xs font-sans font-semibold uppercase tracking-[0.2em] text-gold">
                   {isGreek ? "Σύντομη εικόνα" : "Quick summary"}

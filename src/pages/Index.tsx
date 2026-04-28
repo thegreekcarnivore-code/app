@@ -49,6 +49,7 @@ interface Restaurant {
   googleMapsUrl?: string;
   appleMapsUrl?: string;
   photoReference?: string;
+  menuVerified?: boolean;
 }
 
 interface Recommendation {
@@ -304,7 +305,7 @@ const Index = () => {
             {allRestaurants.length > 0 && (
               <div className="space-y-3">
                 {allRestaurants.map((r, i) => (
-                  <RestaurantCard key={r.name + i} restaurant={{ id: String(i), name: r.name, rating: r.rating, reviewCount: r.reviewCount, distance: r.distance, walkingTime: r.walkingTime, drivingTime: r.drivingTime, averagePrice: r.averagePrice, whyThisPlace: r.whyThisPlace, whatToOrder: r.whatToOrder, mealOptions: r.mealOptions, powerPhrase: r.orderingPhrase, cuisine: r.cuisine, kitchenHours: r.kitchenHours, address: r.address, photoQuery: r.photoQuery, verificationNote: r.verificationNote, googleMapsUrl: r.googleMapsUrl, appleMapsUrl: r.appleMapsUrl, photoReference: r.photoReference, directionHint: (r as any).directionHint }} index={i} city={r.address || locationName || "Nearby"} latitude={coords?.lat} longitude={coords?.lng} source="restaurant" />
+                  <RestaurantCard key={r.name + i} restaurant={{ id: String(i), name: r.name, rating: r.rating, reviewCount: r.reviewCount, distance: r.distance, walkingTime: r.walkingTime, drivingTime: r.drivingTime, averagePrice: r.averagePrice, whyThisPlace: r.whyThisPlace, whatToOrder: r.whatToOrder, mealOptions: r.mealOptions, powerPhrase: r.orderingPhrase, cuisine: r.cuisine, kitchenHours: r.kitchenHours, address: r.address, photoQuery: r.photoQuery, verificationNote: r.verificationNote, googleMapsUrl: r.googleMapsUrl, appleMapsUrl: r.appleMapsUrl, photoReference: r.photoReference, directionHint: (r as any).directionHint, menuVerified: (r as any).menuVerified }} index={i} city={r.address || locationName || "Nearby"} latitude={coords?.lat} longitude={coords?.lng} source="restaurant" />
                 ))}
               </div>
             )}
