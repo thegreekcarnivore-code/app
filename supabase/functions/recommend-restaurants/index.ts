@@ -18,6 +18,28 @@ const VALID_AIRPORT_SIDES = new Set(["before_security", "after_security"]);
 const OPENAI_MODEL_SMALL = getOpenAIModel("OPENAI_MODEL_SMALL", "gpt-4.1-mini");
 const OPENAI_MODEL_STANDARD = getOpenAIModel("OPENAI_MODEL_STANDARD", "gpt-4.1-mini");
 const OPENAI_MODEL_PREMIUM = getOpenAIModel("OPENAI_MODEL_PREMIUM", "gpt-4.1");
+// Final restaurant recommendation model. Defaults to gpt-4.1-mini — structured JSON output
+// doesn't need the full gpt-4.1, and mini is ~10× cheaper with negligible quality loss.
+// Override with OPENAI_MODEL_RESTAURANT_FINAL env var if you want to A/B test.
+const OPENAI_MODEL_RESTAURANT_FINAL = getOpenAIModel("OPENAI_MODEL_RESTAURANT_FINAL", "gpt-4.1-mini");
+
+/**
+ * Normalize a place name for matching:
+ * - lowercase
+ * - strip Greek diacritics / Latin accents (NFD + combining marks removal)
+ * - collapse whitespace + trim
+ * Fixes silent drops when GPT outputs "Ta Perivoli" but Google returned "TAVERNA TO PERIVOLI",
+ * or when accents differ ("καφενέιο" vs "καφενειο").
+ */
+function normalizeName(s: string | null | undefined): string {
+  if (!s || typeof s !== "string") return "";
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function validateInput(body: unknown): {
   latitude: number;
@@ -1566,9 +1588,15 @@ serve(async (req) => {
     const isDelivery = mode === "delivery";
     const isShopping = mode === "shopping";
     const isBestInTown = scope === "best_in_town";
-    const isFastRecommendationMode = isDelivery || isShopping;
+    // Previously: isDelivery || isShopping routed to free OpenStreetMap Overpass,
+    // but those public endpoints now 429/406 rate-limit us. Route everything through
+    // Google Places (paid, reliable) using the else-branch below.
+    const isFastRecommendationMode = false;
     const shouldRunDeepMenuPipeline = !isFastRecommendationMode;
-    const finalRecommendationModel = isFastRecommendationMode ? OPENAI_MODEL_STANDARD : OPENAI_MODEL_PREMIUM;
+    // Use gpt-4.1-mini by default for the final ranking call. Task is structured JSON
+    // (ranking + blurb) which mini handles well at ~10× lower cost than gpt-4.1.
+    // Override via OPENAI_MODEL_RESTAURANT_FINAL env var to A/B test premium if needed.
+    const finalRecommendationModel = OPENAI_MODEL_RESTAURANT_FINAL;
     
     // Use maxDistance if provided, otherwise use defaults
     let radius: number;
@@ -1976,6 +2004,10 @@ serve(async (req) => {
     const menuTexts = new Map<string, string>();
     const generalTexts = new Map<string, string>();
     const menuPageUrls = new Map<string, string>();
+    // Place IDs whose menu came only from GPT-memory (no real website scrape).
+    // Used to flag `menuVerified: false` on the response so the frontend can show
+    // "AI estimate — not verified against a real menu" to prevent trust issues.
+    const placesFromGptKnowledge = new Set<string>();
     if (shouldRunDeepMenuPipeline) {
       // Fetch website text for menu verification (with improved menu discovery pipeline)
       await Promise.all(
@@ -2006,7 +2038,9 @@ serve(async (req) => {
         }
       }
 
-      // Phase 3: GPT knowledge fallback for restaurants without menu content
+      // Phase 3: GPT knowledge fallback for restaurants without menu content.
+      // Track which places have menus that come from GPT-memory (unverified) vs real website
+      // scraping (verified), so the frontend can warn users about AI-estimated menus.
       const cityName = placesToSend[0]?.vicinity?.split(",").pop()?.trim() || "unknown city";
       for (const p of placesToSend) {
         if (!menuTexts.has(p.place_id) || (menuTexts.get(p.place_id)?.length ?? 0) < 200) {
@@ -2015,6 +2049,10 @@ serve(async (req) => {
               if (fallbackMenu) {
                 const existing = menuTexts.get(p.place_id) || "";
                 menuTexts.set(p.place_id, existing + fallbackMenu);
+                // Only mark as knowledge-sourced if we didn't already have a scraped menu
+                if (!existing || existing.length < 200) {
+                  placesFromGptKnowledge.add(p.place_id);
+                }
               }
             })
           );
@@ -2279,7 +2317,7 @@ ${contextNote}`;
     const placeByName = new Map<string, GooglePlace>();
     const placeById = new Map<string, GooglePlace>();
     for (const p of placesToSend) {
-      placeByName.set(p.name.toLowerCase(), p);
+      placeByName.set(normalizeName(p.name), p);
       placeById.set(p.place_id, p);
     }
 
@@ -2488,16 +2526,18 @@ ${contextNote}`;
     if (recommendations.restaurants) {
       const verified: typeof recommendations.restaurants = [];
       for (const r of recommendations.restaurants) {
-        // Fuzzy matching: exact placeId > exact name > substring containment > website text match
-        const lower = r.name.toLowerCase();
+        // Fuzzy matching: exact placeId > normalized name > substring containment > website text match
+        // Normalization handles Greek diacritics + Latin accents + case, so "TAVERNA TO PERIVOLI"
+        // matches "Ta Perivoli" and "καφενείο" matches "καφενειο".
+        const norm = normalizeName(r.name);
         let matchedPlace = (r.placeId && placeById.get(r.placeId))
-          || placeByName.get(lower)
-          || (() => { for (const [pn, p] of placeByName) { if (lower.includes(pn) || pn.includes(lower)) return p; } return undefined; })();
+          || placeByName.get(norm)
+          || (() => { for (const [pn, p] of placeByName) { if (norm.includes(pn) || pn.includes(norm)) return p; } return undefined; })();
 
         // Website-text fallback: if GPT used internal restaurant name (e.g. "Le Jardin" for hotel "Le Richemond")
         if (!matchedPlace) {
           for (const [pid, text] of menuTexts) {
-            if (text.toLowerCase().includes(lower)) {
+            if (normalizeName(text).includes(norm)) {
               matchedPlace = placeById.get(pid);
               if (matchedPlace) { console.info(`Matched "${r.name}" via website text of "${matchedPlace.name}"`); break; }
             }
@@ -2532,6 +2572,9 @@ ${contextNote}`;
         if (menuUrl) {
           r.websiteUrl = menuUrl;
         }
+        // Flag whether the menu content fed to GPT was real (scraped from website) or
+        // AI-recalled from memory. Frontend can show a warning badge for unverified menus.
+        r.menuVerified = !placesFromGptKnowledge.has(matchedPlace.place_id);
         verified.push(r);
       }
       // Post-verification auto-fill: ensure minimum 3 results
@@ -2630,14 +2673,14 @@ ${lowCarbTipInstruction}`;
                 const retryRecs = JSON.parse(retryTool.function.arguments);
                 if (retryRecs.restaurants?.length > 0) {
                   for (const r of retryRecs.restaurants) {
-                    const lower = r.name.toLowerCase();
+                    const norm = normalizeName(r.name);
                     let mp = (r.placeId && placeById.get(r.placeId))
-                      || placeByName.get(lower)
-                      || (() => { for (const [pn, p] of placeByName) { if (lower.includes(pn) || pn.includes(lower)) return p; } return undefined; })();
+                      || placeByName.get(norm)
+                      || (() => { for (const [pn, p] of placeByName) { if (norm.includes(pn) || pn.includes(norm)) return p; } return undefined; })();
                     // Website-text fallback: if GPT used internal restaurant name, match via website content
                     if (!mp) {
                       for (const [pid, text] of menuTexts) {
-                        if (text.toLowerCase().includes(lower)) {
+                        if (normalizeName(text).includes(norm)) {
                           mp = placeById.get(pid);
                           if (mp) { console.log(`Retry: matched "${r.name}" via website text of "${mp.name}"`); break; }
                         }
@@ -2662,6 +2705,7 @@ ${lowCarbTipInstruction}`;
                       // Prefer restaurant/menu-specific page URL over generic homepage for all venues
                       const menuUrl2 = menuPageUrls.get(mp.place_id);
                       if (menuUrl2) r.websiteUrl = menuUrl2;
+                      r.menuVerified = !placesFromGptKnowledge.has(mp.place_id);
                       verified.push(r);
                     } else {
                       console.log(`Retry: could not match "${r.name}" to any verified place`);
