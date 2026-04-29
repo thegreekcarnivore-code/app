@@ -79,3 +79,11 @@ project_id = "bowvosskzbtuxmrwatoj"
     verify_jwt = false
   [functions.fathom-webhook]
     verify_jwt = false
+  [functions.community-auto-prompt]
+    verify_jwt = false
+  [functions.generate-meal-plan]
+    verify_jwt = false
+  [functions.ingest-coach-knowledge]
+    verify_jwt = false
+  [functions.migrate-to-unico]
+    verify_jwt = false
