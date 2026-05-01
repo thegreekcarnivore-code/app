@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil, KeyRound } from "lucide-react";
+import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil, KeyRound, Rocket } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
+import LaunchReadinessPanel from "@/components/admin/LaunchReadinessPanel";
 import AdminGroupManager from "@/components/admin/AdminGroupManager";
 import InviteClientPanel from "@/components/admin/InviteClientPanel";
 import IconButtonWithTooltip from "@/components/IconButtonWithTooltip";
@@ -112,6 +113,7 @@ const ADMIN_TABS = [
   { key: "users", label: "Clients", icon: Users, description: "Client records, approvals, invitations, and direct actions." },
   { key: "invites", label: "Invites", icon: Link2, description: "Direct-entry email access, invite history, and reconnect flows." },
   { key: "programs", label: "Programs", icon: BookOpen, description: "Program templates, structure, and assigned content." },
+  { key: "launch", label: "Launch", icon: Rocket, description: "End-to-end Metamorphosis pipeline status — what's ready, what needs config, what's missing." },
   { key: "calls", label: "Calls", icon: Video, description: "Upcoming calls, schedules, and participation management." },
   { key: "categories", label: "Categories", icon: Tag, description: "Client grouping, tagging, and access segmentation." },
   { key: "todo", label: "To-Do", icon: ListTodo, description: "Operational tasks, follow-ups, and accountability actions." },
@@ -135,7 +137,7 @@ const Admin = () => {
   const [awaitingPaymentSet, setAwaitingPaymentSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "calls" | "categories" | "todo" | "groups" | "finance">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "calls" | "categories" | "todo" | "groups" | "finance">("users");
   const [userCategory, setUserCategory] = useState<string>("all");
   const [userSort, setUserSort] = useState<"newest" | "last-login">("newest");
   const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
@@ -810,7 +812,7 @@ const Admin = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {ADMIN_TABS.filter(t => ["users","invites","programs","finance"].includes(t.key)).map(({ key, label, icon: Icon }) => (
+              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","finance"].includes(t.key)).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
@@ -1275,6 +1277,8 @@ const Admin = () => {
         )}
 
         {activeTab === "programs" && <ProgramTemplateList />}
+
+        {activeTab === "launch" && <LaunchReadinessPanel />}
 
         {activeTab === "calls" && <VideoCallsPanel />}
 
