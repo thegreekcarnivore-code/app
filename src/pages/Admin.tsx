@@ -10,6 +10,7 @@ import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
 import LaunchReadinessPanel from "@/components/admin/LaunchReadinessPanel";
 import FeedbackInboxPanel from "@/components/admin/FeedbackInboxPanel";
+import TestimonialReviewPanel from "@/components/admin/TestimonialReviewPanel";
 import AdminGroupManager from "@/components/admin/AdminGroupManager";
 import InviteClientPanel from "@/components/admin/InviteClientPanel";
 import IconButtonWithTooltip from "@/components/IconButtonWithTooltip";
@@ -116,6 +117,7 @@ const ADMIN_TABS = [
   { key: "programs", label: "Programs", icon: BookOpen, description: "Program templates, structure, and assigned content." },
   { key: "launch", label: "Launch", icon: Rocket, description: "End-to-end Metamorphosis pipeline status — what's ready, what needs config, what's missing." },
   { key: "feedback", label: "Feedback", icon: Inbox, description: "Member ideas, bugs, content requests, praise, and complaints — review and respond." },
+  { key: "stories", label: "Stories", icon: Sparkles, description: "Auto-detected client success stories. Request consent, render cards, push to reels app." },
   { key: "calls", label: "Calls", icon: Video, description: "Upcoming calls, schedules, and participation management." },
   { key: "categories", label: "Categories", icon: Tag, description: "Client grouping, tagging, and access segmentation." },
   { key: "todo", label: "To-Do", icon: ListTodo, description: "Operational tasks, follow-ups, and accountability actions." },
@@ -139,7 +141,7 @@ const Admin = () => {
   const [awaitingPaymentSet, setAwaitingPaymentSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "calls" | "categories" | "todo" | "groups" | "finance">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "stories" | "calls" | "categories" | "todo" | "groups" | "finance">("users");
   const [userCategory, setUserCategory] = useState<string>("all");
   const [userSort, setUserSort] = useState<"newest" | "last-login">("newest");
   const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
@@ -814,7 +816,7 @@ const Admin = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","finance"].includes(t.key)).map(({ key, label, icon: Icon }) => (
+              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","stories","finance"].includes(t.key)).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
@@ -1283,6 +1285,8 @@ const Admin = () => {
         {activeTab === "launch" && <LaunchReadinessPanel />}
 
         {activeTab === "feedback" && <FeedbackInboxPanel />}
+
+        {activeTab === "stories" && <TestimonialReviewPanel />}
 
         {activeTab === "calls" && <VideoCallsPanel />}
 
