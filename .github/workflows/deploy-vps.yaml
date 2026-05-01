@@ -1,0 +1,51 @@
+name: Deploy to Hetzner VPS
+
+# Auto-deploys to the production Hetzner VPS on every push to `main`.
+# Replaces the orphan IONOS Deploy Now pipeline that was deploying to a dead
+# environment. The VPS is the real production host for app.thegreekcarnivore.com.
+#
+# Required GitHub repo secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST       — hostname or IP of the Hetzner VPS
+#   VPS_USER       — ssh user with rights to run deploy.sh (typically `root`)
+#   VPS_SSH_KEY    — private SSH key (full PEM contents) whose public counterpart
+#                    is in ~/.ssh/authorized_keys on the VPS
+#   VPS_SSH_PORT   — (optional) ssh port, defaults to 22
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH + build + reload nginx
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run deploy.sh on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /srv/thegreekcarnivore-app
+            echo "→ Fetching latest from origin/main..."
+            git fetch origin
+            git reset --hard origin/main
+            echo "→ Installing dependencies..."
+            npm ci --production=false
+            echo "→ Building..."
+            npm run build
+            echo "→ Setting ownership..."
+            chown -R www-data:www-data dist
+            echo "→ Reloading nginx..."
+            nginx -t && systemctl reload nginx
+            echo "✓ Deploy complete — $(git rev-parse --short HEAD)"
