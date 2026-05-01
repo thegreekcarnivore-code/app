@@ -12,6 +12,7 @@ import {
   BookOpen,
   CalendarDays,
   Camera,
+  ChevronDown,
   ChevronRight,
   HeartPulse,
   LayoutPanelLeft,
@@ -220,6 +221,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
   const [topView, setTopView] = useState<"measurements" | "analysis">(
     searchParams.get("view") === "analysis" ? "analysis" : "measurements",
   );
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const { registerActions, clearActions } = usePageActions();
   const [formOpen, setFormOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
@@ -567,7 +569,7 @@ const Measurements = ({ userId }: MeasurementsProps) => {
   const wellnessSummaryTitle = insightState.wellnessAverage !== null
     ? `${insightState.wellnessAverage.toFixed(1)}/10`
     : isGreek
-      ? "Χωρίς wellness score"
+      ? "Χωρίς βαθμολογία ευεξίας"
       : "No wellness score";
 
   const wellnessSummaryDetail = insightState.wellnessAverage !== null
@@ -597,39 +599,9 @@ const Measurements = ({ userId }: MeasurementsProps) => {
       ? `${insightState.recentPhotoCount} φωτογραφίες τις τελευταίες 7 ημέρες`
       : `${insightState.recentPhotoCount} photos in the last 7 days`
     : isGreek
-      ? "Οι εβδομαδιαίες φωτογραφίες δίνουν οπτικό feedback."
-      : "Weekly photos give you visual feedback that numbers miss.";
+      ? "Οι εβδομαδιαίες φωτογραφίες δίνουν οπτική εικόνα της προόδου."
+      : "Weekly photos give you visual proof of progress.";
 
-  const tabHeader = tabDescriptions[activeTab];
-  const trackingGuides = [
-    {
-      key: "body" as const,
-      title: isGreek ? "Σώμα" : "Body",
-      status: bodySummaryTitle,
-      detail: isGreek
-        ? "Μέτρηση βάρους, μέσης και wellness scores."
-        : "Weight, waist, and wellness score tracking.",
-      action: isGreek ? "Νέα μέτρηση" : "Log body check-in",
-    },
-    {
-      key: "food" as const,
-      title: isGreek ? "Φαγητό" : "Food",
-      status: nutritionSummaryTitle,
-      detail: isGreek
-        ? "Συνέπεια γευμάτων και καθημερινό nutrition context."
-        : "Meal consistency and daily nutrition context.",
-      action: isGreek ? "Άνοιγμα καρτέλας φαγητού" : "Open food tab",
-    },
-    {
-      key: "photos" as const,
-      title: isGreek ? "Φωτογραφίες" : "Photos",
-      status: photosSummaryTitle,
-      detail: isGreek
-        ? "Οπτικό feedback που συμπληρώνει τους αριθμούς."
-        : "Visual feedback that complements the numbers.",
-      action: isGreek ? "Άνοιγμα καρτέλας φωτογραφιών" : "Open photo tab",
-    },
-  ];
 
   // ---------------------------------------------------------------------------
   // LAYOUT: measurements-first, insights in a left sidebar.
@@ -649,32 +621,48 @@ const Measurements = ({ userId }: MeasurementsProps) => {
   // The insight sidebar content is rendered twice (desktop aside + mobile sheet)
   // so we build the JSX once and reuse it. Keep `key` attributes stable so React
   // doesn't thrash when remounting between the two containers.
+  const summaryTiles = [
+    {
+      key: "body",
+      icon: Scale,
+      title: isGreek ? "Σώμα" : "Body",
+      headline: bodySummaryTitle,
+      detail: bodySummaryDetail,
+    },
+    {
+      key: "wellness",
+      icon: HeartPulse,
+      title: isGreek ? "Ευεξία" : "Wellness",
+      headline: wellnessSummaryTitle,
+      detail: wellnessSummaryDetail,
+    },
+    {
+      key: "food",
+      icon: Apple,
+      title: isGreek ? "Διατροφή" : "Nutrition",
+      headline: nutritionSummaryTitle,
+      detail: nutritionSummaryDetail,
+    },
+    {
+      key: "photos",
+      icon: Camera,
+      title: isGreek ? "Φωτογραφίες" : "Photos",
+      headline: photosSummaryTitle,
+      detail: photosSummaryDetail,
+    },
+  ];
+
+  const checkIns = weeklyCheckInOverview?.checkIns || [];
+  const visibleCheckIns = historyExpanded ? checkIns.slice(0, 6) : checkIns.slice(0, 1);
+
+  // Lean Analysis view — coaching focus first, compact stat grid, collapsible
+  // history. No duplicate navigation (the top-level toggle already does that).
   const insightSidebarBlock = (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.24em] text-gold">
-          {isGreek ? "Κέντρο προόδου" : "Progress center"}
-        </p>
-        <h2 className="font-serif text-lg font-semibold text-foreground">
-          {isGreek ? "Μετρήσεις & Ερμηνεία" : "Measurements & Coaching Insight"}
-        </h2>
-        <p className="text-xs font-sans leading-relaxed text-muted-foreground">
-          {overviewLoading
-            ? isGreek ? "Ανάλυση..." : "Analyzing..."
-            : insightState.latestMeasurement
-              ? isGreek
-                ? `Τελευταία καταγραφή ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "σήμερα" })}`
-                : `Last measurement ${insightState.formatRelativeDays(insightState.lastMeasurementDays, { en: "today", el: "today" })}`
-              : isGreek
-                ? "Βάλε την πρώτη σου μέτρηση για να ξεκινήσει η ανάλυση."
-                : "Log your first measurement so the analysis can start."}
-        </p>
-      </div>
-
-      {/* Coaching focus — the single most actionable next step */}
+      {/* Today's coaching focus — the single most actionable next step. */}
       <div className="rounded-2xl border border-gold/25 bg-gold/5 p-4">
         <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
-          {isGreek ? "Σημερινή καθοδήγηση" : "Coaching focus"}
+          {isGreek ? "Σημερινή καθοδήγηση" : "Today's focus"}
         </p>
         <h3 className="mt-2 font-serif text-base font-semibold text-foreground">
           {insightState.focus.title}
@@ -696,99 +684,79 @@ const Measurements = ({ userId }: MeasurementsProps) => {
         </button>
       </div>
 
-      {/* 4 summary cards stacked vertically for the sidebar */}
-      <div className="space-y-2">
-        {[
-          {
-            key: "body",
-            icon: Scale,
-            title: isGreek ? "Καταγραφή Σώματος" : "Body Check-In",
-            headline: bodySummaryTitle,
-            detail: bodySummaryDetail,
-          },
-          {
-            key: "wellness",
-            icon: HeartPulse,
-            title: isGreek ? "Εικόνα Ευεξίας" : "Wellness Snapshot",
-            headline: wellnessSummaryTitle,
-            detail: wellnessSummaryDetail,
-          },
-          {
-            key: "food",
-            icon: Apple,
-            title: isGreek ? "Ρυθμός Διατροφής" : "Nutrition Rhythm",
-            headline: nutritionSummaryTitle,
-            detail: nutritionSummaryDetail,
-          },
-          {
-            key: "photos",
-            icon: Camera,
-            title: isGreek ? "Ρυθμός Φωτογραφιών" : "Photo Cadence",
-            headline: photosSummaryTitle,
-            detail: photosSummaryDetail,
-          },
-        ].map(({ key, icon: Icon, title, headline, detail }) => (
-          <div key={key} className="rounded-xl border border-border/70 bg-background/80 p-3 shadow-sm">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold">
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {title}
-                </p>
-                <p className="mt-0.5 font-serif text-sm font-semibold text-foreground leading-tight">
-                  {headline}
-                </p>
-                <p className="mt-0.5 text-[11px] font-sans leading-snug text-muted-foreground">
-                  {detail}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick tab switcher — in sidebar so clicking a guide also switches tab */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
-          {isGreek ? "Πλοήγηση προόδου" : "Progress navigation"}
-        </p>
-        <div className="space-y-1.5">
-          {trackingGuides.map((guide) => (
+      {/* Compact 2x2 stat grid — icon + title + number only. Tap to drill into
+          the matching dashboard tab. The detail line is hidden by default to
+          keep the page calm; expand button below shows it. */}
+      <div className="grid grid-cols-2 gap-2">
+        {summaryTiles.map(({ key, icon: Icon, title, headline }) => {
+          const targetTab = key === "wellness" ? "body" : (key as MeasurementTabKey);
+          return (
             <button
-              key={guide.key}
+              key={key}
               onClick={() => {
                 setTopView("measurements");
-                setActiveTab(guide.key);
-                if (guide.key === "body") setFormOpen(true);
+                setActiveTab(targetTab);
                 setInsightsSheetOpen(false);
               }}
-              className={cn(
-                "w-full rounded-xl border p-3 text-left transition-all",
-                activeTab === guide.key
-                  ? "border-gold/40 bg-gold/10 shadow-sm"
-                  : "border-border bg-card hover:border-border/80",
-              )}
+              className="group flex flex-col items-start rounded-xl border border-border/70 bg-background/80 p-3 text-left shadow-sm transition-all hover:border-gold/40 hover:bg-gold/5"
             >
-              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-gold">
-                {guide.title}
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 text-gold">
+                <Icon className="h-4 w-4" />
+              </div>
+              <p className="mt-2 text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {title}
               </p>
-              <p className="mt-1 font-serif text-sm font-semibold text-foreground">{guide.status}</p>
-              <p className="mt-0.5 text-[11px] font-sans leading-snug text-muted-foreground">{guide.detail}</p>
+              <p className="mt-0.5 font-serif text-sm font-semibold text-foreground leading-tight">
+                {headline}
+              </p>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Weekly check-in history list — so clients can open any of the last 12 weeks */}
-      {weeklyCheckInOverview?.checkIns && weeklyCheckInOverview.checkIns.length > 0 && (
+      {/* Optional detail expansion — keeps the page lean by default. */}
+      <details className="group rounded-xl border border-border/70 bg-card">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[11px] font-sans font-medium text-muted-foreground hover:text-foreground">
+          {isGreek ? "Λεπτομέρειες" : "Details"}
+          <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-2 px-3 pb-3">
+          {summaryTiles.map(({ key, title, detail }) => (
+            <div key={key} className="border-t border-border/60 pt-2 first:border-t-0 first:pt-0">
+              <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-gold">
+                {title}
+              </p>
+              <p className="mt-0.5 text-[11px] font-sans leading-snug text-muted-foreground">
+                {detail}
+              </p>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      {/* Check-in history — collapsed by default, shows latest only. Click
+          "see all" to reveal the rest. */}
+      {checkIns.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
-            {isGreek ? "Ιστορικό check-ins" : "Check-in history"}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.22em] text-gold">
+              {isGreek ? "Ιστορικό αναλύσεων" : "Check-in history"}
+            </p>
+            {checkIns.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setHistoryExpanded((v) => !v)}
+                className="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-muted-foreground hover:text-foreground"
+              >
+                {historyExpanded
+                  ? (isGreek ? "Λιγότερα" : "Less")
+                  : (isGreek ? `Όλα (${checkIns.length})` : `All (${checkIns.length})`)}
+                <ChevronDown className={cn("h-3 w-3 transition-transform", historyExpanded && "rotate-180")} />
+              </button>
+            )}
+          </div>
           <div className="space-y-1.5">
-            {weeklyCheckInOverview.checkIns.slice(0, 6).map((checkIn) => (
+            {visibleCheckIns.map((checkIn) => (
               <button
                 key={checkIn.id}
                 onClick={() => {
