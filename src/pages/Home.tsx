@@ -23,6 +23,7 @@ import FoodEntryForm from "@/components/measurements/FoodEntryForm";
 import MeasurementForm from "@/components/measurements/MeasurementForm";
 import WellnessJournal from "@/components/measurements/WellnessJournal";
 import WeeklyAnalysisButton from "@/components/WeeklyAnalysisButton";
+import MetamorphosisDayCard from "@/components/home/MetamorphosisDayCard";
 
 interface RecipeCategory {
   key: string;
@@ -266,6 +267,8 @@ const Home = () => {
             </div>
             <p className="font-sans text-sm text-muted-foreground capitalize shrink-0">{dateStr}</p>
           </div>
+
+          <MetamorphosisDayCard />
 
           <div className="rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm">
             <DailyTasksCard
