@@ -22,6 +22,7 @@ import ProgramProgressBar from "@/components/ProgramProgressBar";
 import FoodEntryForm from "@/components/measurements/FoodEntryForm";
 import MeasurementForm from "@/components/measurements/MeasurementForm";
 import WellnessJournal from "@/components/measurements/WellnessJournal";
+import WeeklyAnalysisButton from "@/components/WeeklyAnalysisButton";
 
 interface RecipeCategory {
   key: string;
@@ -272,6 +273,18 @@ const Home = () => {
               onOpenMeasurements={() => setMeasurementFormOpen(true)}
               onOpenPhotos={() => navigate("/measurements?tab=photos")}
             />
+          </div>
+
+          <div className="rounded-[1.75rem] border border-gold/20 bg-background/85 p-4 shadow-sm">
+            <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+              {isGreek ? "Εβδομαδιαία ανάλυση" : "Weekly analysis"}
+            </p>
+            <p className="mt-1 mb-3 text-xs leading-relaxed text-muted-foreground">
+              {isGreek
+                ? "Διαθέσιμη μία φορά την εβδομάδα — εφόσον έχεις βάλει μετρήσεις και φωτογραφία τις τελευταίες 7 μέρες."
+                : "Available once a week — if you've added measurements and a photo in the last 7 days."}
+            </p>
+            <WeeklyAnalysisButton />
           </div>
         </div>
       </motion.section>

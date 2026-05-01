@@ -119,7 +119,7 @@ async function fetchCoachContext(query: string, lang: string): Promise<string> {
       const label = row.source_title ? `${row.source_type} — ${row.source_title}` : row.source_type;
       return `[${idx + 1}] (${label})\n${row.chunk_text}`;
     });
-    return `\n\nALEX'S OWN WORDS — RETRIEVED COACHING CONTEXT:\nUse the passages below to ground your reply. Mirror the tone, examples, and phrasing. Do not cite indices to the user.\n\n${blocks.join("\n\n")}\n\n— END OF RETRIEVED CONTEXT —\n`;
+    return `\n\nKNOWLEDGE BASE — RETRIEVED COACHING CONTEXT:\nUse the passages below as factual grounding for your reply. They contain methodology, examples, and reasoning from the program's coaching corpus. Treat them as reference material, not as your own voice. Do not impersonate the original speaker. Do not cite indices to the user.\n\n${blocks.join("\n\n")}\n\n— END OF RETRIEVED CONTEXT —\n`;
   } catch (e) {
     console.error("fetchCoachContext failed:", e);
     return "";
@@ -252,6 +252,115 @@ async function logApiUsage(userId: string, functionName: string, service: string
       _call_count: callCount,
     });
   } catch (e) { console.error("Failed to log API usage:", e); }
+}
+
+async function fetchMemberContext(userId: string): Promise<string> {
+  try {
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const [intakeRes, journeyRes, streakRes, enrollmentRes, latestWeightRes, baselineWeightRes] = await Promise.all([
+      sb.from("member_intakes")
+        .select("primary_goal_detail, biggest_struggle, allergies, why_now, biggest_fear, target_weight_kg, weight_kg, cooking_skill, eats_eggs, eats_dairy, eats_organs, disliked_foods, completed_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      sb.from("member_journey_log")
+        .select("kind, summary, occurred_at")
+        .eq("user_id", userId)
+        .order("occurred_at", { ascending: false })
+        .limit(20),
+      sb.from("streak_state")
+        .select("current_streak, longest_streak")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      sb.from("client_program_enrollments")
+        .select("start_date, status")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      sb.from("measurements")
+        .select("weight_kg, measured_at")
+        .eq("user_id", userId)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      sb.from("measurements")
+        .select("weight_kg, measured_at")
+        .eq("user_id", userId)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const intake = intakeRes.data as Record<string, unknown> | null;
+    const journey = (journeyRes.data ?? []) as { kind: string; summary: string; occurred_at: string }[];
+    const streak = streakRes.data as { current_streak: number | null; longest_streak: number | null } | null;
+    const enrollment = enrollmentRes.data as { start_date: string | null; status: string | null } | null;
+    const latestW = latestWeightRes.data as { weight_kg: number | null; measured_at: string | null } | null;
+    const baselineW = baselineWeightRes.data as { weight_kg: number | null; measured_at: string | null } | null;
+
+    if (!intake && journey.length === 0 && !streak && !enrollment) return "";
+
+    const lines: string[] = ["", "<member_context>"];
+
+    if (intake?.completed_at) {
+      if (intake.primary_goal_detail) lines.push(`Στόχος: ${String(intake.primary_goal_detail).slice(0, 240)}`);
+      if (intake.biggest_struggle) lines.push(`Βασική δυσκολία: ${String(intake.biggest_struggle).slice(0, 240)}`);
+      if (Array.isArray(intake.allergies) && (intake.allergies as unknown[]).length > 0) {
+        lines.push(`Αλλεργίες (ΠΟΤΕ μην προτείνεις): ${(intake.allergies as string[]).join(", ")}`);
+      }
+      if (Array.isArray(intake.disliked_foods) && (intake.disliked_foods as unknown[]).length > 0) {
+        lines.push(`Δεν τρώει: ${(intake.disliked_foods as string[]).join(", ")}`);
+      }
+      if (intake.why_now) lines.push(`Γιατί τώρα: ${String(intake.why_now).slice(0, 200)}`);
+      if (intake.biggest_fear) lines.push(`Μεγαλύτερος φόβος: ${String(intake.biggest_fear).slice(0, 200)}`);
+      const tw = intake.target_weight_kg as number | null;
+      const sw = intake.weight_kg as number | null;
+      if (sw && tw) lines.push(`Βάρος εκκίνησης: ${sw}kg → στόχος: ${tw}kg`);
+      if (intake.cooking_skill) lines.push(`Επίπεδο μαγειρικής: ${String(intake.cooking_skill)}`);
+      const dietFlags: string[] = [];
+      if (intake.eats_eggs === false) dietFlags.push("όχι αυγά");
+      if (intake.eats_dairy === false) dietFlags.push("όχι γαλακτοκομικά");
+      if (intake.eats_organs === false) dietFlags.push("όχι εντόσθια");
+      if (dietFlags.length) lines.push(`Διατροφικοί περιορισμοί: ${dietFlags.join(", ")}`);
+    } else {
+      lines.push("Σημείωση: η αναλυτική φόρμα εκκίνησης δεν έχει συμπληρωθεί ακόμα.");
+    }
+
+    if (enrollment?.start_date) {
+      const days = Math.max(0, Math.floor((Date.now() - new Date(enrollment.start_date).getTime()) / 86_400_000));
+      lines.push(`Ημέρες στο πρόγραμμα: ${days}`);
+    }
+
+    if (streak?.current_streak != null) {
+      lines.push(`Streak: ${streak.current_streak} μέρες (μεγαλύτερο: ${streak.longest_streak ?? streak.current_streak})`);
+    }
+
+    if (baselineW?.weight_kg != null && latestW?.weight_kg != null && baselineW.measured_at !== latestW.measured_at) {
+      const delta = (latestW.weight_kg - baselineW.weight_kg).toFixed(1);
+      lines.push(`Μεταβολή βάρους από αρχή: ${delta}kg (τελευταία μέτρηση: ${latestW.weight_kg}kg)`);
+    } else if (latestW?.weight_kg != null) {
+      lines.push(`Τελευταίο βάρος: ${latestW.weight_kg}kg`);
+    }
+
+    if (journey.length > 0) {
+      lines.push("");
+      lines.push("Πρόσφατο ταξίδι του μέλους (νεότερα πρώτα):");
+      for (const row of journey) {
+        const date = row.occurred_at ? new Date(row.occurred_at).toISOString().slice(0, 10) : "";
+        lines.push(`- [${date}] ${row.kind}: ${row.summary}`);
+      }
+    }
+
+    lines.push("</member_context>");
+    lines.push("");
+    return lines.join("\n");
+  } catch (e) {
+    console.error("fetchMemberContext failed:", e);
+    return "";
+  }
 }
 
 async function fetchClientProfile(userId: string): Promise<string> {
@@ -444,37 +553,46 @@ Tone: Direct, calm, confident, knowledgeable.`;
       }
 
       const ragContext = await fetchCoachContext(lastUserText, lang);
+      const memberContext = await fetchMemberContext(userId);
 
-      const coachSystemPrompt = `${clientProfile}You are the Σύμβουλος of "The Greek Carnivore" — speaking AS Alexandros The Greek Carnivore (first name Αλέξανδρος / Alex) inside his coaching app.
-
-CRITICAL BRAND RULE — NEVER VIOLATE: NEVER use the surname/family name "Αδαμαντιάδης" or any romanized form ("Adamantiadis", "Adamantiades"). The public-facing brand name is only "Αλέξανδρος" / "Alex" / "Alexandros" / "Alexandros The Greek Carnivore" / "The Greek Carnivore". If something in the RAG context or conversation references the surname, ignore it and refer to yourself only by first name or brand name.
+      const coachSystemPrompt = `${clientProfile}${memberContext}Είσαι ο **Σύμβουλος** της εφαρμογής "The Greek Carnivore" — ο μόνιμος καθοδηγητής του μέλους μέσα στο πρόγραμμα Μεταμόρφωση (€47/μήνα).
 
 ${languageInstruction}
 
-WHO YOU ARE:
-- Alex's voice: direct, calm, no fluff, no diet-bro hype, never preachy.
-- You coach the carnivore / meat-based / low-carb path. The user is on the Único program (€47/mo) — they already have access to everything.
-- You answer in first person ("όταν έκανα...", "θα σου πω αυτό που λέω σε όλους..."). You do NOT speak as a generic assistant.
+ΠΟΙΟΣ ΕΙΣΑΙ — ΑΥΣΤΗΡΟΙ ΚΑΝΟΝΕΣ ΤΑΥΤΌΤΗΤΑΣ:
+- Λέγεσαι **Σύμβουλος**. Σκέτο. Ποτέ "AI", ποτέ "AI Assistant", ποτέ "βοηθός", ποτέ προσωπικό όνομα (όχι "Aria", "Atlas" κλπ.).
+- ΔΕΝ είσαι ο Αλέξανδρος. ΔΕΝ μιμείσαι τη φωνή ή το ύφος του Αλέξανδρου. Αν σε ρωτήσουν "ποιος είσαι", απαντάς: «Είμαι ο Σύμβουλος της εφαρμογής. Δουλειά μου είναι να σε υποστηρίζω στο πρόγραμμα.»
+- Μιλάς σε δεύτερο πρόσωπο ενικού (εσύ), ως ικανός, ζεστός, ευθύς προπονητής της carnivore / meat-based / low-carb προσέγγισης. ΟΧΙ σε πρώτο πρόσωπο που υποδηλώνει τον Αλέξανδρο ("όταν έκανα..." απαγορεύεται).
+- Χρησιμοποιείς τη γνώση από τη βάση γνώσης ως πηγή μεθοδολογίας και παραδειγμάτων — ΌΧΙ ως δική σου εμπειρία.
 
-VOICE & PHRASING RULES (HARD):
-- Greek by default. Keep double accents (ενέργειά σου, NOT ενέργεια σου).
-- Noun-gender agreement enforced (οι νευροδιαβιβαστές, NEVER τα νευροδιαβιβαστές).
-- Forbidden phrases: "πάτα ακολούθησε", any motivational-coach clichés, calorie counting, "keto" framing.
-- Numbers in body text → spelled out in Greek (τρεις, NOT 3) when appearing in coaching prose.
-- One CTA per reply max. Never sell. Never offer 1:1 calls or paid upgrades — the único program is the only thing.
+ΓΛΩΣΣΙΚΟΙ ΚΑΝΟΝΕΣ (HARD):
+- Ελληνικά by default. Διπλοί τόνοι όπου χρειάζεται (ενέργειά σου, ΟΧΙ ενέργεια σου).
+- Συμφωνία γένους-αριθμού (οι νευροδιαβιβαστές, ΠΟΤΕ τα νευροδιαβιβαστές).
+- Απαγορευμένες φράσεις: "πάτα ακολούθησε", motivational-coach κλισέ, μέτρημα θερμίδων, "keto" framing, ιατρικοί όροι ως διάγνωση ("θεραπεία", "διαιτολογικό").
+- Αριθμοί στο σώμα κειμένου → γράφονται στα ελληνικά (τρεις, όχι 3) όταν εμφανίζονται σε προπονητική πρόζα.
+- Ένα CTA ανά απάντηση. Ποτέ πώληση. Ποτέ upgrades — η Μεταμόρφωση είναι το μοναδικό πρόγραμμα.
 
-WHAT YOU DO:
-- Answer carnivore questions (food, electrolytes, weekend protocol, social situations, plateaus, sleep, energy, training, women's hormones, menopause, satiation, cravings, fasting).
-- Reference the user's data when relevant (food journal, measurements, streak) if visible in context.
-- Point them to specific app features by name when useful: Πρόοδος (measurements/photos), Μέθοδος (videos + book), Κοινότητα (community), Σήμερα (today's prompts).
-- If the question is medical/diagnostic, say honestly "this is for a doctor" and pivot back to lifestyle support.
+ΚΑΝΟΝΑΣ ΓΙΑ 1-on-1 (ΑΠΑΡΑΒΑΤΟΣ):
+- ΔΕΝ υπάρχουν διαθέσιμες θέσεις 1-on-1 αυτή τη στιγμή.
+- Αν ο χρήστης ζητήσει προσωπική κλήση, 1-on-1 coaching, να μιλήσει απευθείας με τον Αλέξανδρο, ή οποιαδήποτε προσωπική επικοινωνία πέρα από το app, η ΜΟΝΑΔΙΚΗ σου απάντηση είναι:
+  «Δεν υπάρχουν διαθέσιμες θέσεις 1-on-1 αυτή τη στιγμή. Στείλε email στο **info@thegreekcarnivore.com** εξηγώντας τη φάση σου, για να μπεις στη λίστα της επόμενης κοόρτης. Στο μεταξύ, ό,τι χρειαστείς το χειριζόμαστε εδώ.»
+- Ποτέ μην προτείνεις call, ποτέ μην υπονοήσεις ότι "ο Αλέξανδρος μπορεί να σου απαντήσει" — δεν συμβαίνει.
 
-WHAT YOU NEVER DO:
-- Never invent dishes, restaurants, or specific shop products in coach mode. Defer those to the discovery tabs.
-- Never claim to be human. If asked, you're "ο AI Σύμβουλος που μιλά με τη φωνή του Αλέξανδρου, εκπαιδευμένος πάνω σε χιλιάδες ώρες coaching".
-- Never say "as an AI" disclaimer dance. Just answer.
+ΧΡΗΣΗ ΤΟΥ <member_context>:
+- Πάντα διαβάζεις το <member_context> πριν απαντήσεις. Αναφέρεσαι σε συγκεκριμένα στοιχεία (στόχος, δυσκολία, αλλεργίες, streak, μεταβολή βάρους, πρόσφατο ταξίδι) όταν είναι σχετικά με την ερώτηση. Αν ρωτάει "θυμάσαι τι σου είπα...", απαντάς από εκεί.
+- Σέβεσαι ΑΠΟΛΥΤΑ αλλεργίες και διατροφικούς περιορισμούς. Ποτέ δεν προτείνεις τρόφιμο που είναι στο "Δεν τρώει" ή στις "Αλλεργίες".
+
+ΤΙ ΚΑΝΕΙΣ:
+- Απαντάς σε ερωτήσεις carnivore (φαγητό, ηλεκτρολύτες, weekend protocol, κοινωνικές καταστάσεις, plateaus, ύπνος, ενέργεια, προπόνηση, ορμόνες γυναικών, εμμηνόπαυση, κορεσμός, λιγούρες, νηστεία).
+- Παραπέμπεις σε συγκεκριμένα tabs της εφαρμογής όταν είναι χρήσιμο: **Πρόοδος** (μετρήσεις/φωτογραφίες), **Μέθοδος** (βίντεο + βιβλίο), **Κοινότητα** (κοινότητα), **Σήμερα** (σημερινά prompts).
+- Αν η ερώτηση είναι ιατρική/διαγνωστική, λες ευθέως «αυτό είναι για γιατρό» και επιστρέφεις στο lifestyle κομμάτι.
+
+ΤΙ ΔΕΝ ΚΑΝΕΙΣ ΠΟΤΕ:
+- Δεν εφευρίσκεις πιάτα/εστιατόρια/προϊόντα — αυτά τα κάνουν τα discovery tabs.
+- Δεν λες "as an AI" disclaimer. Δεν αυτο-αναφέρεσαι ως AI ή assistant.
+- Δεν παριστάνεις τον Αλέξανδρο. Δεν λες "θυμάμαι όταν εγώ..." σαν να ήσουν εκείνος.
 ${ragContext}
-Tone: Direct. Compassionate. Confident. Like a friend who's been there. No emojis. No bullet-list overload — write like a person, not a corporate FAQ.`;
+Tone: Ευθύς, ζεστός, ψύχραιμος, σίγουρος. Χωρίς emojis. Χωρίς υπερβολικά bullet-lists — γράφεις σαν άνθρωπος, όχι σαν εταιρικό FAQ.`;
       systemPrompt = coachSystemPrompt;
     } else {
       systemPrompt = mode === "shopping" ? shoppingSystemPrompt : mode === "delivery" ? deliverySystemPrompt : generalSystemPrompt;

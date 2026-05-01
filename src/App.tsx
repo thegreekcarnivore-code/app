@@ -15,6 +15,9 @@ import { ThemeProvider } from "./context/ThemeContext";
 import GuideSpotlight from "./components/GuideSpotlight";
 import { GuideHighlightProvider } from "./context/GuideHighlightContext";
 import PolicySigningGate from "./components/PolicySigningGate";
+import SubscriptionGate from "./components/SubscriptionGate";
+import IntakeGate from "./components/IntakeGate";
+import FeedbackButton from "./components/FeedbackButton";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +30,8 @@ const queryClient = new QueryClient({
 });
 
 const Landing = lazy(() => import("./pages/Landing"));
+const Unico = lazy(() => import("./pages/Unico"));
+const Policy = lazy(() => import("./pages/Policy"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentCanceled = lazy(() => import("./pages/PaymentCanceled"));
 const Home = lazy(() => import("./pages/Home"));
@@ -44,8 +49,11 @@ const VideoLibrary = lazy(() => import("./pages/VideoLibrary"));
 const Resources = lazy(() => import("./pages/Resources"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Community = lazy(() => import("./pages/Community"));
+const CoachChat = lazy(() => import("./pages/CoachChat"));
 const ContentAutomation = lazy(() => import("./pages/ContentAutomation"));
 const KillswitchPanel = lazy(() => import("./pages/KillswitchPanel"));
+const Intake = lazy(() => import("./pages/Intake"));
+const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
 
 const RouteLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -58,7 +66,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
   if (!user) return <Navigate to="/" replace />;
   if (approved === false) return <PendingApproval />;
-  return <PolicySigningGate>{children}</PolicySigningGate>;
+  return (
+    <PolicySigningGate>
+      <SubscriptionGate>
+        <IntakeGate>{children}</IntakeGate>
+      </SubscriptionGate>
+    </PolicySigningGate>
+  );
 };
 
 const AdminRoute = ({ children }: { children: ReactNode }) => {
@@ -93,6 +107,9 @@ const App = () => (
               <Suspense fallback={<RouteLoader />}>
                 <Routes>
                   <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
+                  <Route path="/metamorphosis" element={<Unico />} />
+                  <Route path="/unico" element={<Unico />} />
+                  <Route path="/policy" element={<Policy />} />
                   <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/go/:token" element={<AccessLink mode="join" />} />
@@ -101,7 +118,8 @@ const App = () => (
                   <Route path="/payment-success" element={<PaymentSuccess />} />
                   <Route path="/payment-canceled" element={<PaymentCanceled />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-                  <Route element={<ProtectedRoute><PageActionsProvider><AppLayout /></PageActionsProvider></ProtectedRoute>}>
+                  <Route path="/intake" element={<ProtectedRoute><Intake /></ProtectedRoute>} />
+                  <Route element={<ProtectedRoute><PageActionsProvider><AppLayout /><FeedbackButton /></PageActionsProvider></ProtectedRoute>}>
                     <Route path="/home" element={<Home />} />
                     <Route path="/discover" element={<Discover />} />
                     <Route path="/measurements" element={<Measurements />} />
@@ -109,6 +127,8 @@ const App = () => (
                     <Route path="/resources" element={<Resources />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/community" element={<Community />} />
+                    <Route path="/coach" element={<CoachChat />} />
+                    <Route path="/weekly-report" element={<WeeklyReport />} />
                   </Route>
                   <Route path="/admin/client/:userId" element={<AdminRoute><AdminClientView /></AdminRoute>} />
                   <Route path="/content-automation" element={<AdminRoute><ContentAutomation /></AdminRoute>} />

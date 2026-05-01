@@ -176,6 +176,104 @@ async function grantPaidAccess(
   });
 }
 
+async function flipSubscriptionStatusByCustomer(
+  supabase: any,
+  customerId: string,
+  next: "active" | "past_due" | "canceled" | "trialing" | "unpaid",
+) {
+  await supabase
+    .from("profiles")
+    .update({
+      subscription_status: next,
+      subscription_status_updated_at: new Date().toISOString(),
+    } as any)
+    .eq("stripe_customer_id" as any, customerId);
+}
+
+async function flipEnrollmentStatusByCustomer(
+  supabase: any,
+  customerId: string,
+  next: "active" | "past_due" | "canceled" | "unpaid",
+) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("stripe_customer_id" as any, customerId)
+    .maybeSingle();
+  if (!profile?.id) return;
+  await supabase
+    .from("client_program_enrollments")
+    .update({ status: next } as any)
+    .eq("user_id", profile.id);
+}
+
+async function sendDunningEmail(supabase: any, customerId: string, invoice: Stripe.Invoice) {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) return;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, display_name")
+    .eq("stripe_customer_id" as any, customerId)
+    .maybeSingle();
+  if (!profile?.email) return;
+  const firstName = profile.display_name || profile.email.split("@")[0] || "";
+  const portalUrl = invoice.hosted_invoice_url
+    || `${Deno.env.get("APP_BASE_URL") ?? "https://app.thegreekcarnivore.com"}/billing`;
+  const html = `<!DOCTYPE html><html lang="el"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#fff;font-family:'Inter',Arial,sans-serif;">
+<div style="max-width:480px;margin:0 auto;padding:40px 30px;">
+  <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
+  <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;color:#1a1a1a;margin:0 0 20px;">Η πληρωμή δεν ολοκληρώθηκε</h1>
+  <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 16px;">${firstName ? `Γεια σου ${firstName},` : "Γεια σου,"}</p>
+  <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 20px;">
+    Φαίνεται ότι η μηνιαία πληρωμή της Μεταμόρφωσης δεν προχώρησε — μάλλον ξέχασες να ενημερώσεις την κάρτα σου.
+    Μέχρι να τακτοποιηθεί, η πρόσβαση στην εφαρμογή σταματά προσωρινά. Θα συνεχίσουμε από εκεί που μείναμε μόλις πληρώσεις.
+  </p>
+  <a href="${portalUrl}" target="_blank" style="display:inline-block;background:#b39a64;color:#141414;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;margin:8px 0 24px;">
+    Ενημέρωσε την κάρτα σου
+  </a>
+  <p style="font-size:13px;color:#888;line-height:1.6;margin:0;">Αν χρειάζεσαι βοήθεια, στείλε email στο info@thegreekcarnivore.com.</p>
+</div></body></html>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [profile.email],
+      subject: "Η πληρωμή σου δεν ολοκληρώθηκε — The Greek Carnivore",
+      html,
+    }),
+  }).catch(e => console.error("dunning email failed", e));
+}
+
+async function sendReactivationEmail(supabase: any, profile: { email: string | null; display_name: string | null }) {
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey || !profile?.email) return;
+  const firstName = profile.display_name || profile.email.split("@")[0] || "";
+  const appUrl = `${Deno.env.get("APP_BASE_URL") ?? "https://app.thegreekcarnivore.com"}/home`;
+  const html = `<!DOCTYPE html><html lang="el"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#fff;font-family:'Inter',Arial,sans-serif;">
+<div style="max-width:480px;margin:0 auto;padding:40px 30px;">
+  <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
+  <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;color:#1a1a1a;margin:0 0 20px;">Καλωσόρισες πίσω</h1>
+  <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 16px;">${firstName ? `Γεια σου ${firstName},` : "Γεια σου,"}</p>
+  <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 20px;">
+    Η πληρωμή σου ολοκληρώθηκε. Συνεχίζουμε ακριβώς από εκεί που μείναμε.
+  </p>
+  <a href="${appUrl}" target="_blank" style="display:inline-block;background:#b39a64;color:#141414;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;margin:8px 0 24px;">Μπες στην εφαρμογή</a>
+</div></body></html>`;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [profile.email],
+      subject: "Καλωσόρισες πίσω — The Greek Carnivore",
+      html,
+    }),
+  }).catch(e => console.error("reactivation email failed", e));
+}
+
 serve(async (req) => {
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     apiVersion: "2025-08-27.basil",
@@ -337,13 +435,73 @@ serve(async (req) => {
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const subId = subscription.id;
+        const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id;
 
         await supabase
           .from("client_programs")
           .update({ payment_status: "canceled" } as any)
           .eq("stripe_subscription_id" as any, subId);
 
-        logStep("Subscription canceled", { subId });
+        if (customerId) {
+          await flipSubscriptionStatusByCustomer(supabase, customerId, "canceled");
+          await flipEnrollmentStatusByCustomer(supabase, customerId, "canceled");
+        }
+
+        logStep("Subscription canceled", { subId, customerId });
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        if (!customerId) {
+          logStep("payment_failed without customer id");
+          break;
+        }
+        await flipSubscriptionStatusByCustomer(supabase, customerId, "past_due");
+        await flipEnrollmentStatusByCustomer(supabase, customerId, "past_due");
+        await sendDunningEmail(supabase, customerId, invoice);
+        logStep("Subscription past_due (payment failed)", { customerId, invoiceId: invoice.id });
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id;
+        if (!customerId) break;
+        const stripeStatus = subscription.status;
+        // Map Stripe statuses → our subscription_status values
+        let next: "active" | "past_due" | "canceled" | "trialing" | "unpaid" | null = null;
+        if (stripeStatus === "active") next = "active";
+        else if (stripeStatus === "past_due") next = "past_due";
+        else if (stripeStatus === "canceled") next = "canceled";
+        else if (stripeStatus === "trialing") next = "trialing";
+        else if (stripeStatus === "unpaid") next = "unpaid";
+        if (next) {
+          await flipSubscriptionStatusByCustomer(supabase, customerId, next);
+          await flipEnrollmentStatusByCustomer(supabase, customerId, next === "active" ? "active" : next === "trialing" ? "active" : next);
+          logStep("Subscription updated", { customerId, stripeStatus, mappedTo: next });
+        }
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        if (!customerId) break;
+        // Read prior status to know if this is a reactivation
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, email, subscription_status, display_name")
+          .eq("stripe_customer_id" as any, customerId)
+          .maybeSingle();
+        const wasInactive = profile && (profile as any).subscription_status !== "active";
+        await flipSubscriptionStatusByCustomer(supabase, customerId, "active");
+        await flipEnrollmentStatusByCustomer(supabase, customerId, "active");
+        if (wasInactive && profile) {
+          await sendReactivationEmail(supabase, profile as any);
+        }
+        logStep("Invoice payment_succeeded → active", { customerId, reactivated: wasInactive });
         break;
       }
 

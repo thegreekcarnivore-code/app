@@ -231,7 +231,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLang] = useState<Lang>(() => {
     const stored = localStorage.getItem("app-lang");
-    return (stored === "el" ? "el" : "en") as Lang;
+    // Greek is the default. English is opt-in.
+    return (stored === "en" ? "en" : "el") as Lang;
   });
 
   useEffect(() => {
