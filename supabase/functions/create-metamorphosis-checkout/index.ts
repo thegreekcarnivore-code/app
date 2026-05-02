@@ -112,7 +112,7 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    log("session created", { sessionId: session.id, userId: user.id });
+    log("session created", { sessionId: session.id, userId: user?.id ?? "(anonymous)", anon: !user });
 
     return new Response(JSON.stringify({ url: session.url, session_id: session.id }), {
       status: 200,
