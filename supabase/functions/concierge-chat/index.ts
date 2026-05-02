@@ -254,6 +254,105 @@ async function logApiUsage(userId: string, functionName: string, service: string
   } catch (e) { console.error("Failed to log API usage:", e); }
 }
 
+const VALID_JOURNEY_KINDS = ["milestone", "struggle", "preference", "decision", "observation"];
+
+async function summarizeAndAppendJourneyLog(
+  userId: string,
+  userMessage: string,
+  assistantText: string,
+): Promise<void> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return;
+  if (assistantText.length < 20 || userMessage.length < 5) return;
+
+  const prompt = `Διάβασε την ανταλλαγή μεταξύ ενός μέλους carnivore και του Συμβούλου.
+Έχει η συνομιλία ένα από τα εξής διαρκή σημεία (όχι απλή ερωταπάντηση): milestone (επίτευγμα/ορόσημο), struggle (δυσκολία που μοιράστηκε), preference (νέα προτίμηση/απέχθεια), decision (απόφαση που πήρε), observation (αξιόλογη παρατήρηση για το ταξίδι του);
+Αν ΝΑΙ, επέστρεψε JSON: {"kind":"<one>","summary":"≤180 χαρ. στα ελληνικά, στρογγυλευμένη παρατήρηση"}.
+Αν ΟΧΙ, επέστρεψε: {"kind":"none"}. Επιστρέφεις ΜΟΝΟ JSON.
+
+Μήνυμα μέλους: ${userMessage.slice(0, 800)}
+Απάντηση Συμβούλου: ${assistantText.slice(0, 1200)}`;
+
+  try {
+    const aiResp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4.1-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        max_tokens: 160,
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!aiResp.ok) return;
+    const aiJson = await aiResp.json();
+    const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
+    let parsed: { kind?: string; summary?: string };
+    try { parsed = JSON.parse(raw); } catch { return; }
+
+    if (!parsed.kind || parsed.kind === "none" || !VALID_JOURNEY_KINDS.includes(parsed.kind)) return;
+    if (!parsed.summary || parsed.summary.length < 10) return;
+
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await sb.from("member_journey_log").insert({
+      user_id: userId,
+      kind: parsed.kind,
+      summary: parsed.summary.slice(0, 200),
+      source: "concierge_chat",
+      raw_excerpt: assistantText.slice(0, 400),
+      metadata: { user_message_excerpt: userMessage.slice(0, 200) },
+    });
+  } catch (e) {
+    console.error("[concierge-chat] summarize-and-append failed:", e);
+  }
+}
+
+function teeStreamAndCaptureAssistantText(
+  body: ReadableStream<Uint8Array>,
+  userId: string,
+  userMessage: string,
+): ReadableStream<Uint8Array> {
+  const [forClient, forCapture] = body.tee();
+
+  const captureWork = (async () => {
+    try {
+      const reader = forCapture.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const obj = JSON.parse(payload);
+            const delta = obj?.choices?.[0]?.delta?.content;
+            if (typeof delta === "string") assistantText += delta;
+          } catch { /* ignore malformed chunk */ }
+        }
+      }
+
+      await summarizeAndAppendJourneyLog(userId, userMessage, assistantText);
+    } catch (e) {
+      console.error("[concierge-chat] capture failed:", e);
+    }
+  })();
+
+  // Keep async work alive after the response returns (Supabase Edge Runtime).
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
+  runtime?.waitUntil?.(captureWork);
+
+  return forClient;
+}
+
 async function fetchMemberContext(userId: string): Promise<string> {
   try {
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -625,7 +724,18 @@ Tone: Ευθύς, ζεστός, ψύχραιμος, σίγουρος. Χωρίς
     // Log API usage (non-blocking)
     logApiUsage(userId, "concierge-chat", "openai", "gpt-4o", 0.003);
 
-    return new Response(response.body, {
+    let returnedBody: ReadableStream<Uint8Array> | null = response.body;
+    if (mode === "coach" && returnedBody) {
+      const lastUserMsg = [...messages].reverse().find((m: { role?: string; content?: unknown }) =>
+        m?.role === "user" && typeof m?.content === "string"
+      );
+      const userMessageText = (lastUserMsg && typeof lastUserMsg.content === "string") ? lastUserMsg.content : "";
+      if (userMessageText.length >= 5) {
+        returnedBody = teeStreamAndCaptureAssistantText(returnedBody, userId, userMessageText);
+      }
+    }
+
+    return new Response(returnedBody, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
