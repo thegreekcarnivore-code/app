@@ -105,11 +105,10 @@ serve(async (req) => {
 
     if (customerId) {
       sessionParams.customer = customerId;
-    } else {
-      // Anonymous flow — Stripe collects the email at checkout.
-      sessionParams.customer_creation = "always";
-      sessionParams.customer_email = undefined; // explicit: let user type it
     }
+    // For anonymous subscription checkout we omit `customer` entirely — Stripe
+    // collects the email at checkout and creates the customer automatically.
+    // (`customer_creation` is rejected by Stripe in subscription mode.)
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
