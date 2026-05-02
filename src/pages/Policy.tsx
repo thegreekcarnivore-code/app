@@ -73,11 +73,6 @@ const Policy = () => {
                 ? "Πριν από οποιαδήποτε αλλαγή στη διατροφή ή στον τρόπο ζωής σου, συμβουλέψου τον γιατρό σου. Αυτό ισχύει διπλά αν λαμβάνεις φαρμακευτική αγωγή, έχεις χρόνια ή προϋπάρχουσα κατάσταση (π.χ. καρδιαγγειακή, μεταβολική, ορμονική, νεφρική, ηπατική, εγκυμοσύνη, διατροφική διαταραχή στο ιστορικό σου), ή έχεις παιδί κάτω των 18 ετών που σκέφτεσαι να εντάξεις."
                 : "Before any change to your diet or lifestyle, consult your physician. This is doubly true if you are on medication, have a chronic or pre-existing condition (e.g. cardiovascular, metabolic, hormonal, kidney, liver, pregnancy, eating-disorder history) or have a child under 18 you are thinking of including."}
             </p>
-            <p className="mt-4">
-              {isGreek
-                ? "Αν εντοπιστούν σήματα κρίσης (αυτοτραυματισμός, διατροφική διαταραχή, ιατρικό επείγον), η εφαρμογή σε κατευθύνει σε επαγγελματική γραμμή βοήθειας. Αυτό είναι το όριο — εκεί χρειάζεται γιατρός, όχι coach."
-                : "If crisis signals are detected (self-harm, eating disorder, medical emergency), the app routes you to a professional helpline. That's the line — that needs a physician, not a coach."}
-            </p>
           </section>
 
           {/* Section: Results guarantee — the new conditional refund */}
@@ -103,8 +98,8 @@ const Policy = () => {
             <ul className="mt-4 list-disc space-y-2 pl-6">
               <li>
                 {isGreek
-                  ? "Ημερήσιο logging γευμάτων τουλάχιστον στο 80% των ημερών"
-                  : "Daily meal logging on at least 80% of days"}
+                  ? "Καθημερινό logging γευμάτων στην εφαρμογή"
+                  : "Daily meal logging in the app"}
               </li>
               <li>
                 {isGreek
@@ -113,13 +108,18 @@ const Policy = () => {
               </li>
               <li>
                 {isGreek
-                  ? "Ενεργή χρήση του εβδομαδιαίου meal plan"
-                  : "Active use of the weekly meal plan"}
+                  ? "Αρχικές μετρήσεις και 4 φωτογραφίες προόδου (Day 1)"
+                  : "Baseline measurements and 4 progress photos (Day 1)"}
               </li>
               <li>
                 {isGreek
-                  ? "Ανάγνωση τουλάχιστον των πρώτων κεφαλαίων του βιβλίου που είναι ενσωματωμένο στην εφαρμογή"
-                  : "Reading at least the opening chapters of the book inside the app"}
+                  ? "Χρήση του Συμβούλου (24/7 ψηφιακή υποστήριξη) τουλάχιστον τρεις φορές"
+                  : "Used the Σύμβουλος (24/7 digital support) at least three times"}
+              </li>
+              <li>
+                {isGreek
+                  ? "Ακολούθηση των συστάσεων του προγράμματος"
+                  : "Followed the program's recommendations"}
               </li>
             </ul>
             <p className="mt-4">
@@ -153,8 +153,32 @@ const Policy = () => {
             </h2>
             <p className="mt-4">
               {isGreek
-                ? "Τα δεδομένα που μου εμπιστεύεσαι (μετρήσεις, σημειώσεις, ιστορικό, μηνύματα) χρησιμοποιούνται αποκλειστικά για την παροχή του προγράμματος. Δεν πωλούνται. Δεν μοιράζονται με τρίτους πέρα από τους απαραίτητους παρόχους υποδομής (Supabase για βάση δεδομένων, Stripe για πληρωμές, Anthropic/OpenAI για επεξεργασία κειμένου). Μπορείς να ζητήσεις διαγραφή του λογαριασμού σου οποτεδήποτε από τη σελίδα προφίλ."
-                : "The data you entrust to me (measurements, notes, history, messages) is used solely to deliver the program. It is not sold. It is not shared with third parties beyond the infrastructure providers required (Supabase for the database, Stripe for payments, Anthropic/OpenAI for text processing). You can request deletion of your account at any time from the profile page."}
+                ? "Τα δεδομένα που μου εμπιστεύεσαι (μετρήσεις, σημειώσεις, ιστορικό, μηνύματα) χρησιμοποιούνται αποκλειστικά για την παροχή του προγράμματος. Δεν πωλούνται. Δεν μοιράζονται με τρίτους πέρα από τους απαραίτητους παρόχους υποδομής (Supabase EU για βάση δεδομένων, Stripe EU για πληρωμές, OpenAI για επεξεργασία κειμένου). Η υποδομή φιλοξενίας είναι ευρωπαϊκή και τα δεδομένα παραμένουν εντός ΕΕ, σε πλήρη συμμόρφωση με τον GDPR. Μπορείς να ζητήσεις διαγραφή του λογαριασμού σου οποτεδήποτε από τη σελίδα προφίλ."
+                : "The data you entrust to me (measurements, notes, history, messages) is used solely to deliver the program. It is not sold. It is not shared with third parties beyond the infrastructure providers required (Supabase EU for the database, Stripe EU for payments, OpenAI for text processing). The hosting infrastructure is European and your data stays within the EU, in full GDPR compliance. You can request deletion of your account at any time from the profile page."}
+            </p>
+          </section>
+
+          {/* Section: Anonymous success references */}
+          <section>
+            <h2 className="font-serif text-2xl font-semibold text-foreground">
+              {isGreek ? "Ανώνυμη αναφορά επιτυχίας" : "Anonymous success references"}
+            </h2>
+            <p className="mt-4">
+              {isGreek
+                ? "Η πρόοδός σου μπορεί να χρησιμοποιηθεί ως ανώνυμη αναφορά επιτυχίας του προγράμματος — αριθμοί, αποτελέσματα, ποσοστά και γενικές παρατηρήσεις. Δεν δημοσιεύονται ποτέ προσωπικά σου στοιχεία (όνομα, πρόσωπο, στοιχεία επικοινωνίας). Καμία φωτογραφία σου δεν χρησιμοποιείται δημόσια χωρίς να σου ζητηθεί πρώτα συγκεκριμένη, ξεχωριστή άδεια για κάθε χρήση."
+                : "Your progress may be used as an anonymous reference of program success — numbers, results, percentages and general observations. Personal details (name, face, contact info) are never published. None of your photos are used publicly without you being asked first for specific, separate consent for each use."}
+            </p>
+          </section>
+
+          {/* Section: Σύμβουλος support model */}
+          <section>
+            <h2 className="font-serif text-2xl font-semibold text-foreground">
+              {isGreek ? "Πώς λειτουργεί η υποστήριξη" : "How support works"}
+            </h2>
+            <p className="mt-4">
+              {isGreek
+                ? "Η coaching υποστήριξη παρέχεται μέσα από τον Σύμβουλο — τον προσωπικό σου καθοδηγητή 24/7 μέσα στην εφαρμογή. Δεν υπάρχουν διαθέσιμες θέσεις 1-on-1 αυτή τη στιγμή. Αν θέλεις να ενημερωθείς για επόμενες κοόρτες, στείλε email στο info@thegreekcarnivore.com."
+                : "Coaching support is delivered through the Σύμβουλος — your 24/7 personal advisor inside the app. No 1-on-1 sessions are available at this time. If you want to be notified about future cohorts, email info@thegreekcarnivore.com."}
             </p>
           </section>
 
@@ -176,7 +200,7 @@ const Policy = () => {
 
           {/* Last updated */}
           <p className="pt-8 text-center text-xs text-muted-foreground/60">
-            {isGreek ? "Τελευταία ενημέρωση: 30 Απριλίου 2026" : "Last updated: 30 April 2026"}
+            {isGreek ? "Τελευταία ενημέρωση: 3 Μαΐου 2026 · Έκδοση 3.0" : "Last updated: 3 May 2026 · Version 3.0"}
           </p>
         </div>
       </div>

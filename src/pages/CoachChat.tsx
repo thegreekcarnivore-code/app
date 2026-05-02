@@ -36,8 +36,8 @@ const CoachChat = () => {
       id: "greeting",
       role: "assistant",
       content: isGreek
-        ? "Είμαι ο AI Σύμβουλος του Greek Carnivore — εκπαιδευμένος στις απαντήσεις, τις κλήσεις και τη φωνή του Αλέξανδρου. Ρώτα με ό,τι θα τον ρωτούσες. Θα σου απαντήσω όπως θα σου απαντούσε εκείνος."
-        : "I'm the Greek Carnivore AI Concierge — trained on Alex's actual answers, calls and voice. Ask me anything you'd ask him. I'll answer the way he would.",
+        ? "Είμαι ο Σύμβουλος — ο προσωπικός σου καθοδηγητής 24/7 μέσα στο πρόγραμμα Μεταμόρφωση. Ξέρω το intake σου, τις μετρήσεις, τις φωτογραφίες και τις προηγούμενες κουβέντες σου. Ρώτα με ό,τι χρειάζεσαι — διατροφή, ηλεκτρολύτες, plateau, weekend protocol, ορμόνες, ύπνο, ενέργεια."
+        : "I'm the Σύμβουλος — your 24/7 personal guide inside the Metamorphosis program. I know your intake, measurements, photos and prior conversations. Ask me anything — nutrition, electrolytes, plateaus, weekend protocol, hormones, sleep, energy.",
     };
     setMessages([greeting]);
   }, [isGreek]);
@@ -140,13 +140,13 @@ const CoachChat = () => {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-[calc(100vh-5rem)]">
       <div className="px-6 pt-14 pb-4 space-y-1">
         <p className="text-[10px] font-sans uppercase tracking-[0.2em] text-gold">
-          {isGreek ? "AI Σύμβουλος · Único" : "AI Concierge · Único"}
+          {isGreek ? "Σύμβουλος · Μεταμόρφωση" : "Σύμβουλος · Metamorphosis"}
         </p>
         <h1 className="font-serif text-2xl font-semibold text-foreground">
-          {isGreek ? "Ο Αλέξανδρος" : "Alex"}
+          {isGreek ? "Ο Σύμβουλος" : "The Σύμβουλος"}
         </h1>
         <p className="font-sans text-xs text-muted-foreground">
-          {isGreek ? "Εκπαιδευμένος στις πραγματικές μου απαντήσεις. 24/7." : "Trained on my actual answers. 24/7."}
+          {isGreek ? "Ο προσωπικός σου καθοδηγητής 24/7 μέσα στην εφαρμογή." : "Your 24/7 personal guide inside the app."}
         </p>
       </div>
 

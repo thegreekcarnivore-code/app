@@ -221,7 +221,7 @@ const buildStages = (live: LiveCounts): Stage[] => {
       id: "intake",
       number: "03",
       title: "Detailed Intake Form",
-      goal: "5-step intake captures goals, allergies, struggles → feeds personalization for AI Σύμβουλος + meal plan.",
+      goal: "5-step intake captures goals, allergies, struggles → feeds personalization for Σύμβουλος + meal plan.",
       description: "After signing the policy, IntakeGate force-redirects every NEW enrolled member to /intake. The form has 5 steps with autosave between steps. On submit, member_intakes.completed_at is set and the member is released into the app. Existing members were backfilled so they bypass the form.",
       triggers: ["First login of a newly-enrolled member", "Manual /intake visit"],
       icon: FileText,
