@@ -158,18 +158,6 @@ const Policy = () => {
             </p>
           </section>
 
-          {/* Section: Anonymous success references */}
-          <section>
-            <h2 className="font-serif text-2xl font-semibold text-foreground">
-              {isGreek ? "Ανώνυμη αναφορά επιτυχίας" : "Anonymous success references"}
-            </h2>
-            <p className="mt-4">
-              {isGreek
-                ? "Η πρόοδός σου μπορεί να χρησιμοποιηθεί ως ανώνυμη αναφορά επιτυχίας του προγράμματος — αριθμοί, αποτελέσματα, ποσοστά και γενικές παρατηρήσεις. Δεν δημοσιεύονται ποτέ προσωπικά σου στοιχεία (όνομα, πρόσωπο, στοιχεία επικοινωνίας). Καμία φωτογραφία σου δεν χρησιμοποιείται δημόσια χωρίς να σου ζητηθεί πρώτα συγκεκριμένη, ξεχωριστή άδεια για κάθε χρήση."
-                : "Your progress may be used as an anonymous reference of program success — numbers, results, percentages and general observations. Personal details (name, face, contact info) are never published. None of your photos are used publicly without you being asked first for specific, separate consent for each use."}
-            </p>
-          </section>
-
           {/* Section: Σύμβουλος support model */}
           <section>
             <h2 className="font-serif text-2xl font-semibold text-foreground">
