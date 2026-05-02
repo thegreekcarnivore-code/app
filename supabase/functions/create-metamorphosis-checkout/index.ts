@@ -27,48 +27,39 @@ serve(async (req) => {
   );
 
   try {
+    // OPTIONAL auth — checkout works for both signed-in and anonymous visitors.
+    // - Signed-in: we know the user, link Stripe customer to their profile, skip
+    //   email entry on Stripe Checkout.
+    // - Anonymous: Stripe Checkout collects the email natively; the webhook
+    //   creates the Supabase user post-payment and emails them a magic link.
+    let user: { id: string; email: string | null } | null = null;
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userErr } = await admin.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const user = userData.user;
-    const email = user.email ?? null;
-    if (!email) {
-      return new Response(JSON.stringify({ error: "User has no email" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData } = await admin.auth.getUser(token);
+      if (userData?.user) {
+        user = { id: userData.user.id, email: userData.user.email ?? null };
+      }
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    const customers = await stripe.customers.list({ email, limit: 1 });
-    let customerId: string;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-    } else {
-      const customer = await stripe.customers.create({ email });
-      customerId = customer.id;
+    let customerId: string | undefined;
+    if (user?.email) {
+      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const customer = await stripe.customers.create({ email: user.email });
+        customerId = customer.id;
+      }
+      await admin
+        .from("profiles")
+        .update({ stripe_customer_id: customerId } as never)
+        .eq("id", user.id);
     }
-
-    await admin
-      .from("profiles")
-      .update({ stripe_customer_id: customerId } as never)
-      .eq("id", user.id);
 
     const { data: configRow } = await admin
       .from("app_config")
@@ -85,15 +76,14 @@ serve(async (req) => {
     // Field names below match what stripe-webhook expects so auto-enroll works without webhook changes.
     const metadata: Record<string, string> = {
       product: "metamorphosis",
-      client_user_id: user.id,
-      client_email: email,
+      client_user_id: user?.id ?? "",
+      client_email: user?.email ?? "",
       program_name: METAMORPHOSIS_PRODUCT_NAME,
       program_template_id: programTemplateId ?? "",
       start_date: new Date().toISOString().slice(0, 10),
     };
 
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       line_items: [
         {
@@ -111,7 +101,17 @@ serve(async (req) => {
       metadata,
       success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/metamorphosis?canceled=1`,
-    });
+    };
+
+    if (customerId) {
+      sessionParams.customer = customerId;
+    } else {
+      // Anonymous flow — Stripe collects the email at checkout.
+      sessionParams.customer_creation = "always";
+      sessionParams.customer_email = undefined; // explicit: let user type it
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     log("session created", { sessionId: session.id, userId: user.id });
 

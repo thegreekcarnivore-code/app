@@ -370,8 +370,13 @@ serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const programId = session.metadata?.program_id;
-        const clientUserId = session.metadata?.client_user_id;
-        const clientEmail = session.metadata?.client_email;
+        const clientUserId = session.metadata?.client_user_id || "";
+        // Email may come from metadata (signed-in flow) OR be collected by Stripe
+        // Checkout for anonymous purchases. Fall back across all three sources.
+        const clientEmail = (session.metadata?.client_email || "")
+          || session.customer_email
+          || session.customer_details?.email
+          || "";
         const programName = session.metadata?.program_name || "Coaching Program";
         const programTemplateId = session.metadata?.program_template_id || null;
         const startDate = session.metadata?.start_date || new Date().toISOString().split("T")[0];
