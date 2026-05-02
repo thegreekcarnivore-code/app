@@ -24,48 +24,62 @@ function formatGreekDate(dateStr: string): string {
   }
 }
 
-function buildWelcomeEmail(programName: string, durationWeeks: number, startDate: string, firstName: string, loginUrl: string): string {
-  const months = Math.round(durationWeeks / 4.33);
-  const durationLabel = months >= 2 ? `${months} μήνες` : `${durationWeeks} εβδομάδες`;
+function buildWelcomeEmail(programName: string, _durationWeeks: number, startDate: string, firstName: string, loginUrl: string): string {
   const formattedStart = formatGreekDate(startDate);
 
   return `<!DOCTYPE html>
 <html lang="el">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background-color:#ffffff;font-family:'Inter',Arial,sans-serif;">
-  <div style="max-width:480px;margin:0 auto;padding:40px 30px;">
+  <div style="max-width:520px;margin:0 auto;padding:40px 30px;">
     <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
-    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:600;color:#1a1a1a;margin:0 0 24px;letter-spacing:0.02em;">
-      Καλωσόρισες στο πρόγραμμά σου! 🎉
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 20px;letter-spacing:0.02em;line-height:1.25;">
+      Καλωσόρισες στη Μεταμόρφωση.
     </h1>
+    <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 18px;">
+      ${firstName},
+    </p>
     <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 20px;">
-      Αγαπητέ/ή ${firstName},
+      Η πληρωμή σου ολοκληρώθηκε. Από εδώ και πέρα έχεις ολοκληρωτική πρόσβαση στο πρόγραμμα — εκπαίδευση carnivore, εργαλεία προόδου, κοινότητα, και τον <strong>Σύμβουλο</strong> διαθέσιμο 24/7 μέσα στην εφαρμογή.
     </p>
-    <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 24px;">
-      Η πληρωμή σου ολοκληρώθηκε με επιτυχία! Είμαι πολύ χαρούμενος που ξεκινάμε μαζί αυτό το ταξίδι 
-      για τους επόμενους <strong>${durationLabel}</strong>.
-    </p>
-    <div style="background:#faf8f4;border-radius:12px;padding:20px 24px;margin:0 0 24px;">
-      <p style="margin:0 0 12px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Το πρόγραμμά σου</p>
+
+    <div style="background:#faf8f4;border-left:3px solid #b39a64;border-radius:8px;padding:18px 22px;margin:0 0 24px;">
+      <p style="margin:0 0 8px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Εγγύηση 60 ημερών</p>
+      <p style="margin:0;font-size:14px;color:#333;line-height:1.65;">
+        Αν τηρήσεις πιστά το πρόγραμμα για 60 μέρες και δεν δεις απώλεια βάρους, επιστρέφονται οι πρώτες δύο μηνιαίες χρεώσεις. Τα κριτήρια πιστής τήρησης τα βλέπεις μέσα στην εφαρμογή.
+      </p>
+    </div>
+
+    <div style="background:#fafafa;border-radius:12px;padding:18px 22px;margin:0 0 28px;">
+      <p style="margin:0 0 10px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Το πρόγραμμά σου</p>
       <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:6px 0;font-size:13px;color:#888;width:120px;">Πρόγραμμα</td><td style="padding:6px 0;font-size:14px;color:#222;font-weight:600;">${programName}</td></tr>
-        <tr><td style="padding:6px 0;font-size:13px;color:#888;">Διάρκεια</td><td style="padding:6px 0;font-size:14px;color:#222;font-weight:600;">${durationLabel}</td></tr>
-        <tr><td style="padding:6px 0;font-size:13px;color:#888;">Ημ. Έναρξης</td><td style="padding:6px 0;font-size:14px;color:#222;font-weight:600;">${formattedStart}</td></tr>
+        <tr><td style="padding:5px 0;font-size:13px;color:#888;width:130px;">Πρόγραμμα</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">${programName}</td></tr>
+        <tr><td style="padding:5px 0;font-size:13px;color:#888;">Συνδρομή</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">€47/μήνα · μηνιαία ανανέωση</td></tr>
+        <tr><td style="padding:5px 0;font-size:13px;color:#888;">Ημ. Έναρξης</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">${formattedStart}</td></tr>
       </table>
     </div>
-    <p style="font-size:14px;color:#666;line-height:1.7;margin:0 0 8px;">📋 <strong>Τα επόμενα βήματα:</strong></p>
-    <ol style="font-size:14px;color:#555;line-height:1.9;margin:0 0 28px;padding-left:18px;">
-      <li>Συμπλήρωσε το προφίλ σου στην εφαρμογή</li>
-      <li>Καταχώρησε τις αρχικές μετρήσεις σου</li>
-      <li>Βγάλε τις πρώτες φωτογραφίες προόδου</li>
-      <li>Εξερεύνησε τα εκπαιδευτικά βίντεο</li>
+
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 10px;font-weight:600;">Τα τρία πρώτα βήματα:</p>
+    <ol style="font-size:14px;color:#555;line-height:1.85;margin:0 0 26px;padding-left:20px;">
+      <li><strong>Όροι συνεργασίας</strong> — διάβασε και υπέγραψε στην πρώτη οθόνη.</li>
+      <li><strong>Intake form</strong> — συμπλήρωσε το προφίλ σου ώστε ο Σύμβουλος να σου μιλάει στοχευμένα.</li>
+      <li><strong>Day 1 — Σημείο εκκίνησης</strong> — βάρος, μετρήσεις, και 4 φωτογραφίες προόδου. Από αυτό ξεκινάει η εγγύηση.</li>
     </ol>
-    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 28px;text-decoration:none;margin:0 0 12px;">
-      Μπες στην Εφαρμογή
+
+    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 30px;text-decoration:none;margin:0 0 28px;">
+      Ξεκίνα τώρα →
     </a>
-    <hr style="border:none;border-top:1px solid #eee;margin:32px 0 20px;" />
-    <p style="font-size:13px;color:#888;line-height:1.6;margin:0 0 4px;">Σε περιμένει ένα υπέροχο ταξίδι μεταμόρφωσης! 💪</p>
-    <p style="font-size:13px;color:#888;line-height:1.6;margin:0;">Αλέξανδρος — <strong>The Greek Carnivore</strong></p>
+
+    <p style="font-size:13px;color:#666;line-height:1.7;margin:0 0 16px;">
+      Όλη η coaching υποστήριξη είναι μέσα στην εφαρμογή. Δεν υπάρχουν 1-on-1 συνεδρίες αυτή τη στιγμή. Για χρεώσεις ή τεχνικά: <a href="mailto:info@thegreekcarnivore.com" style="color:#666;text-decoration:underline;">info@thegreekcarnivore.com</a> (απαντήσεις 2 φορές την εβδομάδα).
+    </p>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:24px 0 18px;" />
+
+    <p style="font-size:11px;color:#999;line-height:1.6;margin:0 0 4px;">
+      Ο Alexandros The Greek Carnivore είναι lifestyle coach carnivore — όχι ιατρός ή διαιτολόγος. Το πρόγραμμα δεν αποτελεί ιατρική διάγνωση ή θεραπεία. Συμβουλέψου τον γιατρό σου πριν από σημαντικές αλλαγές στη διατροφή σου.
+    </p>
+    <p style="font-size:12px;color:#888;line-height:1.6;margin:14px 0 0;">— <strong>The Greek Carnivore</strong></p>
   </div>
 </body>
 </html>`;
@@ -244,6 +258,56 @@ async function sendDunningEmail(supabase: any, customerId: string, invoice: Stri
       html,
     }),
   }).catch(e => console.error("dunning email failed", e));
+}
+
+async function appendJourneyLog(
+  supabase: any,
+  userId: string,
+  kind: "milestone" | "struggle" | "observation",
+  summary: string,
+  metadata: Record<string, unknown> = {},
+): Promise<void> {
+  try {
+    await supabase.from("member_journey_log").insert({
+      user_id: userId,
+      kind,
+      summary: summary.slice(0, 200),
+      source: "billing",
+      metadata,
+    });
+  } catch (e) {
+    console.error("journey log append failed", e);
+  }
+}
+
+async function logBillingLapseToJourney(supabase: any, customerId: string): Promise<void> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("stripe_customer_id" as any, customerId)
+    .maybeSingle();
+  const userId = (profile as any)?.id;
+  if (!userId) return;
+  await appendJourneyLog(
+    supabase,
+    userId,
+    "struggle",
+    "Η πληρωμή της Μεταμόρφωσης διακόπηκε και η πρόσβαση παύθηκε προσωρινά.",
+    { event: "payment_failed" },
+  );
+}
+
+async function logReactivationToJourney(supabase: any, userId: string, daysInactive: number | null): Promise<void> {
+  const summary = daysInactive && daysInactive > 1
+    ? `Η συνδρομή ενεργοποιήθηκε ξανά μετά από ${daysInactive} ημέρες διακοπής.`
+    : "Η συνδρομή ενεργοποιήθηκε ξανά. Συνεχίζουμε από εκεί που μείναμε.";
+  await appendJourneyLog(
+    supabase,
+    userId,
+    "milestone",
+    summary,
+    { event: "reactivation", days_inactive: daysInactive },
+  );
 }
 
 async function sendReactivationEmail(supabase: any, profile: { email: string | null; display_name: string | null }) {
@@ -461,6 +525,7 @@ serve(async (req) => {
         await flipSubscriptionStatusByCustomer(supabase, customerId, "past_due");
         await flipEnrollmentStatusByCustomer(supabase, customerId, "past_due");
         await sendDunningEmail(supabase, customerId, invoice);
+        await logBillingLapseToJourney(supabase, customerId);
         logStep("Subscription past_due (payment failed)", { customerId, invoiceId: invoice.id });
         break;
       }
@@ -492,7 +557,7 @@ serve(async (req) => {
         // Read prior status to know if this is a reactivation
         const { data: profile } = await supabase
           .from("profiles")
-          .select("id, email, subscription_status, display_name")
+          .select("id, email, subscription_status, subscription_status_updated_at, display_name")
           .eq("stripe_customer_id" as any, customerId)
           .maybeSingle();
         const wasInactive = profile && (profile as any).subscription_status !== "active";
@@ -500,6 +565,12 @@ serve(async (req) => {
         await flipEnrollmentStatusByCustomer(supabase, customerId, "active");
         if (wasInactive && profile) {
           await sendReactivationEmail(supabase, profile as any);
+          const userId = (profile as any).id as string;
+          const lapsedAt = (profile as any).subscription_status_updated_at as string | null;
+          const daysInactive = lapsedAt
+            ? Math.max(1, Math.round((Date.now() - new Date(lapsedAt).getTime()) / 86400000))
+            : null;
+          await logReactivationToJourney(supabase, userId, daysInactive);
         }
         logStep("Invoice payment_succeeded → active", { customerId, reactivated: wasInactive });
         break;

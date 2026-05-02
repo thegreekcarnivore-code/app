@@ -19,6 +19,32 @@ interface ClientNote {
   title: string;
 }
 
+interface MemberIntake {
+  allergies: string[] | null;
+  disliked_foods: string[] | null;
+  eats_eggs: boolean | null;
+  eats_dairy: boolean | null;
+  eats_organs: boolean | null;
+  cooking_skill: string | null;
+  primary_goal_detail: string | null;
+  completed_at: string | null;
+}
+
+// Greek substring matchers used to exclude recipes whose ingredients clash
+// with intake-declared dietary flags. Conservative: false negatives are
+// safer than false positives (model double-checks via prompt).
+const INGREDIENT_BLOCKLIST_FOR_FLAGS: Record<"no_eggs" | "no_dairy" | "no_organs", string[]> = {
+  no_eggs: ["αυγ", "ομελέτ"],
+  no_dairy: ["τυρί", "γιαούρτ", "γάλα", "βούτυρ", "κρέμα γάλακτος", "παρμεζάν", "φέτα", "ανθότυρο", "μυζήθρα", "κεφαλοτύρι", "κασέρι", "γραβιέρα"],
+  no_organs: ["συκώτι", "καρδιά", "νεφρά", "μυαλό", "γλώσσα", "πατσά", "σπληνάντερ"],
+};
+
+function recipeMatchesAnyTerm(ingredientsEl: string, terms: string[]): boolean {
+  if (!ingredientsEl || terms.length === 0) return false;
+  const lower = ingredientsEl.toLowerCase();
+  return terms.some((t) => lower.includes(t.toLowerCase()));
+}
+
 async function authenticateUser(req: Request): Promise<string> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
@@ -78,7 +104,7 @@ serve(async (req) => {
       }
     }
 
-    const [profileRes, notesRes, recipesRes, journalRes] = await Promise.all([
+    const [profileRes, notesRes, recipesRes, journalRes, intakeRes] = await Promise.all([
       admin.from("profiles").select("id, first_name, language").eq("id", userId).maybeSingle(),
       admin.from("client_notes").select("category, title").eq("user_id", userId).eq("is_active", true),
       admin
@@ -92,10 +118,15 @@ serve(async (req) => {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20),
+      admin
+        .from("member_intakes")
+        .select("allergies, disliked_foods, eats_eggs, eats_dairy, eats_organs, cooking_skill, primary_goal_detail, completed_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
     ]);
 
-    const recipes: Recipe[] = (recipesRes.data ?? []).filter((r): r is Recipe => Boolean(r?.id));
-    if (recipes.length === 0) {
+    const allRecipes: Recipe[] = (recipesRes.data ?? []).filter((r): r is Recipe => Boolean(r?.id));
+    if (allRecipes.length === 0) {
       return new Response(JSON.stringify({ error: "No recipes available to plan with" }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -103,9 +134,40 @@ serve(async (req) => {
     }
 
     const notes: ClientNote[] = notesRes.data ?? [];
-    const allergies = notes.filter((n) => n.category === "allergy").map((n) => n.title);
-    const restrictions = notes.filter((n) => n.category === "restriction").map((n) => n.title);
+    const intake = intakeRes.data as MemberIntake | null;
+    const intakeReady = Boolean(intake?.completed_at);
+
+    // Merge allergies + dislikes from BOTH client_notes (legacy) and member_intakes (new).
+    const noteAllergies = notes.filter((n) => n.category === "allergy").map((n) => n.title);
+    const noteRestrictions = notes.filter((n) => n.category === "restriction").map((n) => n.title);
+    const intakeAllergies = (intakeReady && intake?.allergies) ? intake.allergies : [];
+    const intakeDislikes = (intakeReady && intake?.disliked_foods) ? intake.disliked_foods : [];
+    const allergies = Array.from(new Set([...noteAllergies, ...intakeAllergies])).filter(Boolean);
+    const restrictions = Array.from(new Set([...noteRestrictions, ...intakeDislikes])).filter(Boolean);
     const goals = notes.filter((n) => n.category === "goal").map((n) => n.title);
+    if (intakeReady && intake?.primary_goal_detail) goals.push(intake.primary_goal_detail);
+
+    // Build hard exclusion list from intake diet flags.
+    const flagBlocklist: string[] = [];
+    if (intakeReady) {
+      if (intake?.eats_eggs === false) flagBlocklist.push(...INGREDIENT_BLOCKLIST_FOR_FLAGS.no_eggs);
+      if (intake?.eats_dairy === false) flagBlocklist.push(...INGREDIENT_BLOCKLIST_FOR_FLAGS.no_dairy);
+      if (intake?.eats_organs === false) flagBlocklist.push(...INGREDIENT_BLOCKLIST_FOR_FLAGS.no_organs);
+    }
+    // Allergies + dislikes are also substring-matched conservatively against ingredients.
+    const allergyTerms = [...allergies, ...restrictions, ...flagBlocklist].filter(Boolean);
+
+    const recipes = allergyTerms.length === 0
+      ? allRecipes
+      : allRecipes.filter((r) => !recipeMatchesAnyTerm(r.ingredients_el ?? "", allergyTerms));
+
+    if (recipes.length === 0) {
+      return new Response(JSON.stringify({ error: "All recipes excluded by allergies/restrictions" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const recentMeals = (journalRes.data ?? []).slice(0, 12).map((m: { description: string }) => m.description).filter(Boolean);
 
     const recipeCatalog = recipes.map((r) => ({
@@ -113,9 +175,22 @@ serve(async (req) => {
       title: lang === "el" ? r.title_el || r.title_en : r.title_en || r.title_el,
     }));
 
+    const cookingSkill = (intakeReady && intake?.cooking_skill) ? intake.cooking_skill : null;
+    const cookingSkillNote = lang === "el"
+      ? cookingSkill === "none" || cookingSkill === "basic"
+        ? " Προτίμησε απλές συνταγές με ≤4 υλικά και ελάχιστα βήματα."
+        : cookingSkill === "advanced"
+          ? " Μπορείς να εντάξεις και πιο σύνθετες τεχνικές αν ταιριάζουν."
+          : ""
+      : cookingSkill === "none" || cookingSkill === "basic"
+        ? " Prefer simple recipes with ≤4 ingredients and minimal steps."
+        : cookingSkill === "advanced"
+          ? " You may include more advanced techniques where relevant."
+          : "";
+
     const systemPrompt = lang === "el"
-      ? `Είσαι ο σχεδιαστής εβδομαδιαίου meal plan για το πρόγραμμα Único του Greek Carnivore. Φτιάχνεις 7-ήμερο πρόγραμμα 2 γευμάτων/ημέρα (πρωινό-μεσημεριανό-βραδινό προαιρετικά). Χρησιμοποιείς ΜΟΝΟ συνταγές από τον δοσμένο κατάλογο, αναφέροντας το recipe_id. Σεβάσου αλλεργίες και περιορισμούς. Αποφεύγεις την επανάληψη των πρόσφατων γευμάτων. Επιστρέφεις JSON αυστηρά της μορφής {"days":[{"date":"YYYY-MM-DD","meals":[{"slot":"breakfast|lunch|dinner","recipe_id":"...","title":"...","notes":"..."}]}]}.`
-      : `You are the weekly meal-plan designer for the Greek Carnivore Único program. Build a 7-day plan with 2-3 meals per day. Only use recipes from the provided catalog, referencing recipe_id. Respect allergies and restrictions. Avoid repeating recent meals. Return strict JSON {"days":[{"date":"YYYY-MM-DD","meals":[{"slot":"breakfast|lunch|dinner","recipe_id":"...","title":"...","notes":"..."}]}]}.`;
+      ? `Είσαι ο σχεδιαστής εβδομαδιαίου meal plan για το πρόγραμμα Μεταμόρφωση του Greek Carnivore. Φτιάχνεις 7-ήμερο πρόγραμμα 2 γευμάτων/ημέρα (πρωινό-μεσημεριανό-βραδινό προαιρετικά). Χρησιμοποιείς ΜΟΝΟ συνταγές από τον δοσμένο κατάλογο, αναφέροντας το recipe_id. ΑΠΟΛΥΤΟΣ ΣΕΒΑΣΜΟΣ σε αλλεργίες, περιορισμούς, και διατροφικά flags (no_eggs/no_dairy/no_organs) — αν μια συνταγή έχει απαγορευμένο υλικό, ΔΕΝ τη χρησιμοποιείς. Αποφεύγεις την επανάληψη πρόσφατων γευμάτων.${cookingSkillNote} Επιστρέφεις JSON αυστηρά της μορφής {"days":[{"date":"YYYY-MM-DD","meals":[{"slot":"breakfast|lunch|dinner","recipe_id":"...","title":"...","notes":"..."}]}]}.`
+      : `You are the weekly meal-plan designer for the Greek Carnivore Metamorphosis program. Build a 7-day plan with 2-3 meals per day. Use ONLY recipes from the provided catalog, referencing recipe_id. ABSOLUTE RESPECT for allergies, restrictions, and diet flags (no_eggs/no_dairy/no_organs) — if a recipe contains a forbidden ingredient, do NOT use it. Avoid repeating recent meals.${cookingSkillNote} Return strict JSON {"days":[{"date":"YYYY-MM-DD","meals":[{"slot":"breakfast|lunch|dinner","recipe_id":"...","title":"...","notes":"..."}]}]}.`;
 
     const userPrompt = JSON.stringify({
       week_start: weekStart,
@@ -124,6 +199,14 @@ serve(async (req) => {
       goals,
       allergies,
       restrictions,
+      diet_flags: intakeReady
+        ? {
+            no_eggs: intake?.eats_eggs === false,
+            no_dairy: intake?.eats_dairy === false,
+            no_organs: intake?.eats_organs === false,
+            cooking_skill: cookingSkill,
+          }
+        : null,
       recent_meals: recentMeals,
       recipe_catalog: recipeCatalog,
     });
