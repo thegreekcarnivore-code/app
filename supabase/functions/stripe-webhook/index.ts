@@ -357,7 +357,10 @@ serve(async (req) => {
     let event: Stripe.Event;
 
     if (webhookSecret && sig) {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+      // Deno's Edge Runtime exposes Web Crypto only async — Stripe's sync
+      // constructEvent() throws "SubtleCryptoProvider cannot be used in a
+      // synchronous context". Use the async variant instead.
+      event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
       logStep("Webhook signature verified");
     } else {
       event = JSON.parse(body);
