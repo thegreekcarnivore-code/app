@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import EmbeddedMetamorphosisCheckout from "@/components/checkout/EmbeddedMetamorphosisCheckout";
 import {
   BookOpen,
   Camera,
@@ -361,45 +362,13 @@ const Unico = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const isGreek = lang === "el";
   const wasCanceled = searchParams.get("canceled") === "1";
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     setError(null);
-    setLoading(true);
-    try {
-      // Anonymous-friendly: Stripe Checkout collects email natively for non-signed-in
-      // visitors. The webhook creates the Supabase user post-payment and sends a
-      // welcome email with a magic-login link — zero pre-payment friction.
-      const SUPABASE_URL = "https://bowvosskzbtuxmrwatoj.supabase.co";
-      const ANON = (import.meta as unknown as { env?: { VITE_SUPABASE_PUBLISHABLE_KEY?: string; VITE_SUPABASE_ANON_KEY?: string } }).env;
-      const anonKey = ANON?.VITE_SUPABASE_PUBLISHABLE_KEY ?? ANON?.VITE_SUPABASE_ANON_KEY ?? "";
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-      };
-      if (user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      }
-      const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-metamorphosis-checkout`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({}),
-      });
-      if (!resp.ok) {
-        const body = await resp.text();
-        throw new Error(body || (isGreek ? "Σφάλμα checkout" : "Checkout error"));
-      }
-      const data = (await resp.json()) as { url?: string };
-      if (!data.url) throw new Error(isGreek ? "Δεν λάβαμε URL checkout" : "No checkout URL returned");
-      window.location.href = data.url;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : (isGreek ? "Κάτι πήγε στραβά" : "Something went wrong");
-      setError(message);
-      setLoading(false);
-    }
+    setCheckoutOpen(true);
   };
 
   return (
@@ -634,6 +603,12 @@ const Unico = () => {
           </a>
         </p>
       </div>
+
+      <EmbeddedMetamorphosisCheckout
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        isGreek={isGreek}
+      />
     </div>
   );
 };
