@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { Send } from "lucide-react";
+import { Send, Brain } from "lucide-react";
 
 interface Message {
   id: string;
@@ -23,11 +24,29 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
+type MemoryLevel = "new" | "learning" | "knows_you" | "deep";
+
+const memoryLabel = (level: MemoryLevel, isGreek: boolean) => {
+  if (level === "new")        return isGreek ? "Νέα γνωριμία"     : "Just met";
+  if (level === "learning")   return isGreek ? "Σε μαθαίνει"      : "Getting to know you";
+  if (level === "knows_you")  return isGreek ? "Σε ξέρει"         : "Knows you";
+  return isGreek ? "Σε ξέρει βαθιά" : "Deep memory";
+};
+
+const memoryThreshold = (count: number): MemoryLevel => {
+  if (count >= 30) return "deep";
+  if (count >= 12) return "knows_you";
+  if (count >= 4)  return "learning";
+  return "new";
+};
+
 const CoachChat = () => {
   const { lang } = useLanguage();
+  const { user } = useAuth();
   const isGreek = lang === "el";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [memoryCount, setMemoryCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +60,19 @@ const CoachChat = () => {
     };
     setMessages([greeting]);
   }, [isGreek]);
+
+  // Memory level: how many durable signals the Σύμβουλος has captured
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await (supabase.from as any)("member_journey_log")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if (!cancelled) setMemoryCount(count ?? 0);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -148,6 +180,12 @@ const CoachChat = () => {
         <p className="font-sans text-xs text-muted-foreground">
           {isGreek ? "Ο προσωπικός σου καθοδηγητής 24/7 μέσα στην εφαρμογή." : "Your 24/7 personal guide inside the app."}
         </p>
+        {memoryCount !== null && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1 text-[10px] font-sans font-semibold text-gold">
+            <Brain className="h-3 w-3" />
+            <span>{memoryLabel(memoryThreshold(memoryCount), isGreek)} · {memoryCount} {isGreek ? "σήματα" : "signals"}</span>
+          </div>
+        )}
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 space-y-3 pb-4">
