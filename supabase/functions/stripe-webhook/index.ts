@@ -369,6 +369,27 @@ serve(async (req) => {
         const programTemplateId = session.metadata?.program_template_id || null;
         const startDate = session.metadata?.start_date || new Date().toISOString().split("T")[0];
 
+        // Annual upgrade: cancel any existing monthly subscription on this
+        // customer so they aren't double-billed. The new annual sub stays.
+        if (session.metadata?.product === "metamorphosis_annual") {
+          const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+          const newSubId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+          if (customerId) {
+            try {
+              const subs = await stripe.subscriptions.list({ customer: customerId, status: "active", limit: 10 });
+              for (const oldSub of subs.data) {
+                if (oldSub.id === newSubId) continue;
+                if (oldSub.metadata?.product === "metamorphosis_annual") continue;
+                // Cancel at period end so they keep what they already paid for this month
+                await stripe.subscriptions.update(oldSub.id, { cancel_at_period_end: true });
+                logStep("Annual upgrade — old monthly cancel_at_period_end set", { oldSubId: oldSub.id });
+              }
+            } catch (e) {
+              logStep("Annual upgrade — failed to cancel old subs", { msg: e instanceof Error ? e.message : String(e) });
+            }
+          }
+        }
+
         logStep("Checkout completed", { programId, clientUserId, clientEmail, mode: session.mode });
 
         if (programId) {
