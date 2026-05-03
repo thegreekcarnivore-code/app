@@ -24,62 +24,47 @@ function formatGreekDate(dateStr: string): string {
   }
 }
 
-function buildWelcomeEmail(programName: string, _durationWeeks: number, startDate: string, firstName: string, loginUrl: string): string {
-  const formattedStart = formatGreekDate(startDate);
-
+function buildWelcomeEmail(_programName: string, _durationWeeks: number, _startDate: string, firstName: string, loginUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="el">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background-color:#ffffff;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;padding:40px 30px;">
-    <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 24px;" />
-    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:600;color:#1a1a1a;margin:0 0 20px;letter-spacing:0.02em;line-height:1.25;">
-      Καλωσόρισες στη Μεταμόρφωση.
+    <img src="${LOGO_URL}" alt="The Greek Carnivore" width="80" style="display:block;margin:0 0 28px;" />
+
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:600;color:#1a1a1a;margin:0 0 20px;letter-spacing:0.01em;line-height:1.2;">
+      Είσαι μέσα — ξεκινάμε.
     </h1>
+
     <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 18px;">
       ${firstName},
     </p>
-    <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 20px;">
-      Η πληρωμή σου ολοκληρώθηκε. Από εδώ και πέρα έχεις ολοκληρωτική πρόσβαση στο πρόγραμμα — εκπαίδευση carnivore, εργαλεία προόδου, κοινότητα, και τον <strong>Σύμβουλο</strong> διαθέσιμο 24/7 μέσα στην εφαρμογή.
+
+    <p style="font-size:15px;color:#444;line-height:1.75;margin:0 0 28px;">
+      Πέρασες την πόρτα. Από εδώ και πέρα η Μεταμόρφωση τρέχει για σένα — ο <strong>Σύμβουλος</strong> σε ξέρει 24/7, οι μετρήσεις σου χτίζουν την προοπτική, και κάθε εβδομάδα η εφαρμογή σου δείχνει τι αλλάζει.
     </p>
 
-    <div style="background:#faf8f4;border-left:3px solid #b39a64;border-radius:8px;padding:18px 22px;margin:0 0 24px;">
-      <p style="margin:0 0 8px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Εγγύηση 60 ημερών</p>
-      <p style="margin:0;font-size:14px;color:#333;line-height:1.65;">
-        Αν τηρήσεις πιστά το πρόγραμμα για 60 μέρες και δεν δεις απώλεια βάρους, επιστρέφονται οι πρώτες δύο μηνιαίες χρεώσεις. Τα κριτήρια πιστής τήρησης τα βλέπεις μέσα στην εφαρμογή.
-      </p>
-    </div>
+    <p style="font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px;">Πρώτη μέρα · 3 βήματα</p>
 
-    <div style="background:#fafafa;border-radius:12px;padding:18px 22px;margin:0 0 28px;">
-      <p style="margin:0 0 10px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Το πρόγραμμά σου</p>
-      <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:5px 0;font-size:13px;color:#888;width:130px;">Πρόγραμμα</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">${programName}</td></tr>
-        <tr><td style="padding:5px 0;font-size:13px;color:#888;">Συνδρομή</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">€47/μήνα · μηνιαία ανανέωση</td></tr>
-        <tr><td style="padding:5px 0;font-size:13px;color:#888;">Ημ. Έναρξης</td><td style="padding:5px 0;font-size:14px;color:#222;font-weight:600;">${formattedStart}</td></tr>
-      </table>
-    </div>
-
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 10px;font-weight:600;">Τα τρία πρώτα βήματα:</p>
-    <ol style="font-size:14px;color:#555;line-height:1.85;margin:0 0 26px;padding-left:20px;">
-      <li><strong>Όροι συνεργασίας</strong> — διάβασε και υπέγραψε στην πρώτη οθόνη.</li>
-      <li><strong>Intake form</strong> — συμπλήρωσε το προφίλ σου ώστε ο Σύμβουλος να σου μιλάει στοχευμένα.</li>
-      <li><strong>Day 1 — Σημείο εκκίνησης</strong> — βάρος, μετρήσεις, και 4 φωτογραφίες προόδου. Από αυτό ξεκινάει η εγγύηση.</li>
+    <ol style="font-size:14.5px;color:#444;line-height:1.85;margin:0 0 30px;padding-left:22px;">
+      <li><strong>Πρώτη είσοδος</strong> — μπες με ένα κλικ από κάτω.</li>
+      <li><strong>Λίγες ερωτήσεις</strong> — ώστε ο Σύμβουλος να σου μιλάει στοχευμένα. 5 λεπτά.</li>
+      <li><strong>Σημείο εκκίνησης</strong> — βάρος, μέτρα, 4 φωτογραφίες. Από εδώ μετράμε όλα τα επόμενα.</li>
     </ol>
 
-    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;border-radius:12px;padding:14px 30px;text-decoration:none;margin:0 0 28px;">
+    <a href="${loginUrl}" target="_blank" style="display:inline-block;background-color:#b39a64;color:#141414;font-family:'Inter',Arial,sans-serif;font-size:15px;font-weight:600;border-radius:12px;padding:15px 32px;text-decoration:none;margin:0 0 30px;">
       Ξεκίνα τώρα →
     </a>
 
-    <p style="font-size:13px;color:#666;line-height:1.7;margin:0 0 16px;">
-      Όλη η coaching υποστήριξη είναι μέσα στην εφαρμογή. Δεν υπάρχουν 1-on-1 συνεδρίες αυτή τη στιγμή. Για χρεώσεις ή τεχνικά: <a href="mailto:info@thegreekcarnivore.com" style="color:#666;text-decoration:underline;">info@thegreekcarnivore.com</a> (απαντήσεις 2 φορές την εβδομάδα).
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;font-style:italic;">
+      Αύριο το πρωί θα σε περιμένει η Ημέρα 2 — το πρώτο βίντεο της Φάσης 1 και ο οδηγός για τις πρώτες 72 ώρες.
     </p>
 
-    <hr style="border:none;border-top:1px solid #eee;margin:24px 0 18px;" />
+    <hr style="border:none;border-top:1px solid #f0f0f0;margin:28px 0 16px;" />
 
-    <p style="font-size:11px;color:#999;line-height:1.6;margin:0 0 4px;">
-      Ο Alexandros The Greek Carnivore είναι lifestyle coach carnivore — όχι ιατρός ή διαιτολόγος. Το πρόγραμμα δεν αποτελεί ιατρική διάγνωση ή θεραπεία. Συμβουλέψου τον γιατρό σου πριν από σημαντικές αλλαγές στη διατροφή σου.
+    <p style="font-size:11px;color:#aaa;line-height:1.6;margin:0;">
+      Lifestyle coaching carnivore — όχι ιατρική συμβουλή. Συμβουλέψου τον γιατρό σου πριν από σημαντικές αλλαγές στη διατροφή. Πλήρεις όροι: <a href="https://app.thegreekcarnivore.com/policy" style="color:#aaa;text-decoration:underline;">/policy</a>
     </p>
-    <p style="font-size:12px;color:#888;line-height:1.6;margin:14px 0 0;">— <strong>The Greek Carnivore</strong></p>
   </div>
 </body>
 </html>`;
