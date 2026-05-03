@@ -95,7 +95,7 @@ const ScreenToday = ({ isGreek }: { isGreek: boolean }) => (
       <div className="rounded-xl border border-border/60 bg-card p-3">
         <MessageCircle className="h-4 w-4 text-gold" />
         <p className="mt-1 text-[10px] font-sans font-semibold text-foreground">
-          {isGreek ? "Ρώτα τον Alex" : "Ask Alex"}
+          {isGreek ? "Ρώτα τον Σύμβουλο" : "Ask the Σύμβουλος"}
         </p>
       </div>
     </div>
@@ -111,14 +111,14 @@ const ScreenToday = ({ isGreek }: { isGreek: boolean }) => (
   </div>
 );
 
-// Screen 2 — Concierge chat (Σύμβουλος): answer in his voice
+// Screen 2 — Σύμβουλος chat: in-app advisor, available 24/7
 const ScreenChat = ({ isGreek }: { isGreek: boolean }) => (
   <div className="flex h-full flex-col">
     <p className="text-[10px] font-sans uppercase tracking-[0.2em] text-gold">
-      {isGreek ? "ΣΎΜΒΟΥΛΟΣ" : "CONCIERGE"}
+      {isGreek ? "ΣΎΜΒΟΥΛΟΣ" : "ΣΥΜΒΟΥΛΟΣ"}
     </p>
     <h3 className="mt-1 font-serif text-xl font-semibold text-foreground">
-      {isGreek ? "Ρώτα τον Alex" : "Ask Alex"}
+      {isGreek ? "Ο Σύμβουλος του Αλέξανδρου" : "Alex's Σύμβουλος"}
     </h3>
     <div className="mt-4 flex-1 space-y-2 overflow-hidden">
       <div className="ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-gold/15 px-3 py-2">
@@ -130,7 +130,7 @@ const ScreenChat = ({ isGreek }: { isGreek: boolean }) => (
       </div>
       <div className="mr-auto max-w-[85%] rounded-2xl rounded-tl-sm bg-card px-3 py-2 ring-1 ring-border/60">
         <p className="text-[10px] font-sans font-semibold uppercase tracking-wider text-gold">
-          {isGreek ? "Alex" : "Alex"}
+          {isGreek ? "Σύμβουλος" : "Σύμβουλος"}
         </p>
         <p className="mt-1 text-[11px] font-sans leading-relaxed text-foreground">
           {isGreek
@@ -255,13 +255,13 @@ const ScreenRhythm = ({ isGreek }: { isGreek: boolean }) => {
 const FEATURES = [
   {
     icon: MessageCircle,
-    el: { title: "Απάντηση όποτε τη χρειάζεσαι", body: "Στις 11 το βράδυ της Παρασκευής. Στο διάλειμμα δουλειάς. Όταν η όρεξη φεύγει. Παίρνεις απάντηση στη γλώσσα μου — χωρίς να περιμένεις." },
-    en: { title: "An answer the moment you need it", body: "11pm on a Friday. The lunch break. When motivation slips. You get an answer in my voice — without waiting." },
+    el: { title: "Απάντηση όποτε τη χρειάζεσαι", body: "Στις 11 το βράδυ της Παρασκευής. Στο διάλειμμα δουλειάς. Όταν η όρεξη φεύγει. Ο Σύμβουλος του Αλέξανδρου σου απαντάει στη στιγμή — με βάση τη μέθοδό του και ό,τι έχεις καταγράψει στην εφαρμογή." },
+    en: { title: "An answer the moment you need it", body: "11pm on a Friday. The lunch break. When motivation slips. Alex's Σύμβουλος answers instantly — drawing on his method and everything you've logged in the app." },
   },
   {
     icon: Video,
-    el: { title: "Κάθε απάντηση είναι ήδη γυρισμένη", body: "Όλα τα βίντεό μου, ξεκλείδωτα. Κάθε φάση, κάθε ορόσημο, κάθε δύσκολη στιγμή — βρίσκεις την απάντηση σε ένα κλικ." },
-    en: { title: "Every answer is already filmed", body: "All my videos, unlocked. Every phase, every milestone, every hard moment — find the answer in one tap." },
+    el: { title: "Όλα τα βίντεο του Αλέξανδρου, ξεκλείδωτα", body: "Κάθε φάση, κάθε ορόσημο, κάθε δύσκολη στιγμή του προγράμματος. Τα βίντεο που έχει γυρίσει ο Αλέξανδρος, οργανωμένα ώστε να βρίσκεις αυτό που χρειάζεσαι σε ένα κλικ." },
+    en: { title: "Every Alex video, unlocked", body: "Every phase, every milestone, every hard moment of the program. Alex's recorded videos, organised so you find what you need in one tap." },
   },
   {
     icon: BookOpen,
@@ -312,7 +312,7 @@ const FAQ = {
   el: [
     {
       q: "Πώς παίρνω απάντηση όταν τη χρειάζομαι;",
-      a: "Όποτε γράψεις, παίρνεις απάντηση στη φωνή μου — με βάση όλα όσα έχω καταγράψει για χρόνια στις κλήσεις, στα μηνύματα και στα βίντεό μου. Τα εβδομαδιαία πλάνα, οι αναφορές και τα κοινοτικά prompts ξεκινούν μόνα τους. Δεν περιμένεις εμένα — αλλά παίρνεις την προσέγγισή μου.",
+      a: "Όποτε γράψεις, παίρνεις απάντηση από τον Σύμβουλο μέσα στην εφαρμογή — διαθέσιμο 24/7, στηριγμένο στη μέθοδο του Αλέξανδρου και στο intake σου. Τα εβδομαδιαία πλάνα, οι αναφορές και τα prompts ξεκινούν μόνα τους. Δεν είναι 1-on-1 με τον Αλέξανδρο — είναι ο Σύμβουλος που έχει χτίσει για να σε υποστηρίζει χωρίς αναμονή.",
     },
     {
       q: "Έχει εγγύηση;",
@@ -324,17 +324,17 @@ const FAQ = {
     },
     {
       q: "Ξέρει τη δική μου περίπτωση;",
-      a: "Ναι. Διαβάζει τις σημειώσεις σου, τις μετρήσεις σου, το ιστορικό σου. Η προσέγγιση που παίρνεις είναι αυτή που έχω χρησιμοποιήσει σε δεκάδες πελάτες με παρόμοιες καταστάσεις.",
+      a: "Ναι. Στο intake λες τον στόχο σου, τη μεγαλύτερη δυσκολία, τους περιορισμούς (αλλεργίες, τι δεν τρως), το επίπεδο μαγειρικής, ακόμα και τι σε φοβίζει. Ο Σύμβουλος αυτό το διαβάζει σε κάθε σου ερώτηση και απαντάει στοχευμένα — με τα δικά σου δεδομένα. Δεν παίρνεις γενικές οδηγίες.",
     },
     {
-      q: "Αν χρειαστώ άνθρωπο σε κρίση;",
-      a: "Αν εντοπιστούν σήματα κρίσης (αυτοτραυματισμός, διατροφική διαταραχή, ιατρικό επείγον), σε κατευθύνω σε επαγγελματική γραμμή βοήθειας. Αυτό είναι το όριο — εκεί χρειάζεται γιατρός, όχι coach.",
+      q: "Άκυρο όποτε θες;",
+      a: "Ναι. Ακυρώνεις από τη σελίδα Χρεώσεις μέσα στην εφαρμογή ή απευθείας στο Stripe — χωρίς ποινή, χωρίς διαπραγμάτευση. Η ακύρωση τερματίζει την επόμενη ημέρα ανανέωσης. Παράλληλα έχεις και την εγγύηση 60 ημερών αν τηρήσεις πιστά το πρόγραμμα.",
     },
   ],
   en: [
     {
       q: "How do I get an answer when I need one?",
-      a: "Whenever you write, you get an answer in my voice — drawn from years of my recorded calls, messages and videos. Weekly meal plans, reports and community prompts start on their own. You don't wait on me — but the approach you get is mine.",
+      a: "Whenever you write, the Σύμβουλος inside the app responds — available 24/7, grounded in Alex's method and your intake. Weekly meal plans, reports and prompts run on their own. It's not 1-on-1 with Alex — it's the Σύμβουλος he built so you don't have to wait.",
     },
     {
       q: "Is there a guarantee?",
@@ -346,11 +346,11 @@ const FAQ = {
     },
     {
       q: "Does it know my specific case?",
-      a: "Yes. It reads your notes, measurements and history. The approach you get is the one I've used with dozens of clients in similar situations.",
+      a: "Yes. At intake you share your goal, biggest struggle, restrictions (allergies, what you don't eat), cooking skill, even what scares you. The Σύμβουλος reads that on every question and answers with your data. You don't get generic advice.",
     },
     {
-      q: "What if I need a human in a crisis?",
-      a: "If crisis signals are detected (self-harm, eating disorder, medical emergency), I route you to a professional helpline. That's the line — that needs a doctor, not a coach.",
+      q: "Cancel anytime?",
+      a: "Yes. Cancel from the Billing page inside the app or directly in Stripe — no penalty, no negotiation. Cancellation ends at the next renewal date. The 60-day results guarantee runs alongside it if you've followed the program.",
     },
   ],
 };
@@ -416,8 +416,8 @@ const Unico = () => {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl font-sans text-base leading-relaxed text-muted-foreground sm:text-lg">
             {isGreek
-              ? "Ένα σύστημα που σε κρατά συνεπή. Απάντηση όποτε τη χρειάζεσαι, στη γλώσσα μου. Ένας ρυθμός που συνεχίζει ακόμα κι όταν χάνεις την όρεξη."
-              : "A system that keeps you consistent. An answer whenever you need it, in my voice. A rhythm that holds even when motivation doesn't."}
+              ? "Ένα σύστημα που σε κρατά συνεπή. Ο Σύμβουλος του Αλέξανδρου, διαθέσιμος όποτε τον χρειάζεσαι. Ένας ρυθμός που συνεχίζει ακόμα κι όταν χάνεις την όρεξη."
+              : "A system that keeps you consistent. Alex's Σύμβουλος, available whenever you need it. A rhythm that holds even when motivation doesn't."}
           </p>
 
           {/* Pricing card */}
@@ -443,9 +443,9 @@ const Unico = () => {
             <div className="mt-4 flex items-center justify-center gap-2 text-xs font-sans text-muted-foreground">
               <ShieldCheck className="h-3.5 w-3.5 text-gold" />
               <span>
-                {isGreek ? "Εγγύηση αποτελέσματος · " : "Results guarantee · "}
+                {isGreek ? "Εγγύηση 60 ημερών · Άκυρο όποτε θες · " : "60-day guarantee · Cancel anytime · "}
                 <a href="/policy" className="underline hover:text-foreground">
-                  {isGreek ? "Δες όρους" : "See terms"}
+                  {isGreek ? "Όροι" : "Terms"}
                 </a>
               </span>
             </div>
