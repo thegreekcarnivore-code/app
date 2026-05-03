@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "@/hooks/use-toast";
-import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil, KeyRound, Rocket, Inbox, TrendingUp } from "lucide-react";
+import { Check, X, Link2, LogOut, Users, Shield, Activity, Ruler, Home, DollarSign, StickyNote, FileText, MessageCircle, BookOpen, Clock, Settings2, Trash2, Video, Tag, ListTodo, Sparkles, ClipboardCheck, UserPlus, Mail, UserCheck, Send, RefreshCw, Pencil, KeyRound, Rocket, Inbox, TrendingUp, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AddClientDialog from "@/components/admin/AddClientDialog";
 import ProgramTemplateList from "@/components/admin/ProgramTemplateList";
@@ -30,6 +30,7 @@ import ChatBubble from "@/components/ChatBubble";
 import ClientAccountabilityPanel from "@/components/admin/ClientAccountabilityPanel";
 import FinanceDashboard from "@/components/admin/FinanceDashboard";
 import AiCostMonitorPanel from "@/components/admin/AiCostMonitorPanel";
+import MemberHealthPanel from "@/components/admin/MemberHealthPanel";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -125,6 +126,7 @@ const ADMIN_TABS = [
   { key: "groups", label: "Groups", icon: Users, description: "Community groups and shared client cohorts." },
   { key: "finance", label: "Finance", icon: DollarSign, description: "Revenue visibility, offer tracking, and business metrics." },
   { key: "ai_costs", label: "AI Costs", icon: TrendingUp, description: "Per-member AI/API spend this month — flags anyone approaching the €5/€47 margin line." },
+  { key: "health", label: "Health", icon: Heart, description: "Member retention dashboard — risk bands + pending re-engagement messages awaiting your approval." },
 ] as const;
 
 const Admin = () => {
@@ -143,7 +145,7 @@ const Admin = () => {
   const [awaitingPaymentSet, setAwaitingPaymentSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "stories" | "calls" | "categories" | "todo" | "groups" | "finance" | "ai_costs">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "stories" | "calls" | "categories" | "todo" | "groups" | "finance" | "ai_costs" | "health">("users");
   const [userCategory, setUserCategory] = useState<string>("all");
   const [userSort, setUserSort] = useState<"newest" | "last-login">("newest");
   const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
@@ -818,7 +820,7 @@ const Admin = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","stories","finance","ai_costs"].includes(t.key)).map(({ key, label, icon: Icon }) => (
+              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","stories","finance","ai_costs","health"].includes(t.key)).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
@@ -1300,6 +1302,7 @@ const Admin = () => {
 
         {activeTab === "finance" && <FinanceDashboard />}
         {activeTab === "ai_costs" && <AiCostMonitorPanel />}
+        {activeTab === "health" && <MemberHealthPanel />}
       </motion.div>
 
       <Dialog open={!!selectedNotesUserId} onOpenChange={(open) => !open && setSelectedNotesUserId(null)}>
