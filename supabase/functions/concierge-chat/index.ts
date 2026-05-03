@@ -730,7 +730,12 @@ Tone: Ευθύς, ζεστός, ψύχραιμος, σίγουρος. Χωρίς
         m?.role === "user" && typeof m?.content === "string"
       );
       const userMessageText = (lastUserMsg && typeof lastUserMsg.content === "string") ? lastUserMsg.content : "";
-      if (userMessageText.length >= 5) {
+      // Skip journey-log summarization when the user's message tripped a
+      // crisis pattern — those are short-lived signals that already get
+      // logged to crisis_flags. Storing them as journey "struggles" pollutes
+      // member_context with phantom ongoing symptoms.
+      const crisisOnInput = userMessageText ? detectCrisis(userMessageText) : null;
+      if (userMessageText.length >= 5 && !crisisOnInput) {
         returnedBody = teeStreamAndCaptureAssistantText(returnedBody, userId, userMessageText);
       }
     }
