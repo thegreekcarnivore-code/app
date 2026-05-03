@@ -83,8 +83,15 @@ serve(async (req) => {
       start_date: new Date().toISOString().slice(0, 10),
     };
 
+    // Caller can request embedded mode (in-app checkout) by POSTing
+    // {"mode":"embedded"}. Default is hosted (redirect to checkout.stripe.com).
+    let requestBody: { mode?: string } = {};
+    try { requestBody = await req.json(); } catch { /* empty body */ }
+    const embedded = requestBody?.mode === "embedded";
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
+      ui_mode: embedded ? "embedded" : "hosted",
       line_items: [
         {
           price_data: {
@@ -99,9 +106,17 @@ serve(async (req) => {
       allow_promotion_codes: true,
       subscription_data: { metadata },
       metadata,
-      success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/metamorphosis?canceled=1`,
     };
+
+    if (embedded) {
+      // In embedded mode Stripe takes a single return_url; success/cancel are
+      // both posted there with the session_id, and the in-app component reads
+      // the session status to decide what to render.
+      sessionParams.return_url = `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+    } else {
+      sessionParams.success_url = `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+      sessionParams.cancel_url = `${origin}/metamorphosis?canceled=1`;
+    }
 
     if (customerId) {
       sessionParams.customer = customerId;
@@ -112,12 +127,18 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    log("session created", { sessionId: session.id, userId: user?.id ?? "(anonymous)", anon: !user });
+    log("session created", { sessionId: session.id, userId: user?.id ?? "(anonymous)", anon: !user, embedded });
 
-    return new Response(JSON.stringify({ url: session.url, session_id: session.id }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        // hosted-mode consumers read .url to redirect.
+        // embedded-mode consumers read .client_secret to mount <EmbeddedCheckout/>.
+        url: session.url,
+        client_secret: session.client_secret,
+        session_id: session.id,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     const message = e instanceof Error ? e.message : "checkout failed";
     log("ERROR", { message });
