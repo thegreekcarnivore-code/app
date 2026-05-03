@@ -16,14 +16,21 @@ const corsHeaders = {
 
 const FROM_EMAIL = "The Greek Carnivore <noreply@thegreekcarnivore.com>";
 
-const MILESTONE_DAYS = [21, 81, 171, 351] as const;
+// Cadence: every 2 months on the 3rd week of each paid cycle (~9 days before
+// the next charge fires). 6 regular reels per year + 1 yearly Master mega-
+// milestone = 7 per fully engaged member per year. ~1.9% of ARR in reel-
+// generation cost when v2 ReelForge integration lands.
+const MILESTONE_DAYS = [21, 81, 141, 201, 261, 321, 351] as const;
 type MilestoneDay = typeof MILESTONE_DAYS[number];
 
 const MILESTONE_LABELS: Record<MilestoneDay, { headline: string; period: string }> = {
-  21:  { headline: "Πρώτο ορόσημο",      period: "30 ημέρες" },
-  81:  { headline: "3 μήνες",            period: "3 μήνες" },
-  171: { headline: "Το μισό χρόνο",      period: "6 μήνες" },
-  351: { headline: "1 χρόνος Master",    period: "1 χρόνος" },
+  21:  { headline: "Πρώτο ορόσημο",   period: "1 μήνας" },
+  81:  { headline: "3 μήνες",         period: "3 μήνες" },
+  141: { headline: "5 μήνες",         period: "5 μήνες" },
+  201: { headline: "7 μήνες",         period: "7 μήνες" },
+  261: { headline: "9 μήνες",         period: "9 μήνες" },
+  321: { headline: "11 μήνες",        period: "11 μήνες" },
+  351: { headline: "1 χρόνος Master", period: "1 χρόνος" },
 };
 
 const log = (step: string, details?: unknown) => {
