@@ -54,6 +54,7 @@ const ContentAutomation = lazy(() => import("./pages/ContentAutomation"));
 const KillswitchPanel = lazy(() => import("./pages/KillswitchPanel"));
 const Intake = lazy(() => import("./pages/Intake"));
 const WeeklyReport = lazy(() => import("./pages/WeeklyReport"));
+const GroupSessions = lazy(() => import("./pages/GroupSessions"));
 
 const RouteLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -129,6 +130,7 @@ const App = () => (
                     <Route path="/community" element={<Community />} />
                     <Route path="/coach" element={<CoachChat />} />
                     <Route path="/weekly-report" element={<WeeklyReport />} />
+                    <Route path="/sessions" element={<GroupSessions />} />
                   </Route>
                   <Route path="/admin/client/:userId" element={<AdminRoute><AdminClientView /></AdminRoute>} />
                   <Route path="/content-automation" element={<AdminRoute><ContentAutomation /></AdminRoute>} />

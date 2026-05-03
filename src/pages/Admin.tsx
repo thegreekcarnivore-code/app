@@ -31,6 +31,7 @@ import ClientAccountabilityPanel from "@/components/admin/ClientAccountabilityPa
 import FinanceDashboard from "@/components/admin/FinanceDashboard";
 import AiCostMonitorPanel from "@/components/admin/AiCostMonitorPanel";
 import MemberHealthPanel from "@/components/admin/MemberHealthPanel";
+import GroupSessionsAdminPanel from "@/components/admin/GroupSessionsAdminPanel";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -127,6 +128,7 @@ const ADMIN_TABS = [
   { key: "finance", label: "Finance", icon: DollarSign, description: "Revenue visibility, offer tracking, and business metrics." },
   { key: "ai_costs", label: "AI Costs", icon: TrendingUp, description: "Per-member AI/API spend this month — flags anyone approaching the €5/€47 margin line." },
   { key: "health", label: "Health", icon: Heart, description: "Member retention dashboard — risk bands + pending re-engagement messages awaiting your approval." },
+  { key: "sessions", label: "Sessions", icon: Video, description: "Monthly group session videos — upload, publish, and review pending member questions." },
 ] as const;
 
 const Admin = () => {
@@ -145,7 +147,7 @@ const Admin = () => {
   const [awaitingPaymentSet, setAwaitingPaymentSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "stories" | "calls" | "categories" | "todo" | "groups" | "finance" | "ai_costs" | "health">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "invites" | "programs" | "launch" | "feedback" | "stories" | "calls" | "categories" | "todo" | "groups" | "finance" | "ai_costs" | "health" | "sessions">("users");
   const [userCategory, setUserCategory] = useState<string>("all");
   const [userSort, setUserSort] = useState<"newest" | "last-login">("newest");
   const [adminCategories, setAdminCategories] = useState<AdminCategory[]>([]);
@@ -820,7 +822,7 @@ const Admin = () => {
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","stories","finance","ai_costs","health"].includes(t.key)).map(({ key, label, icon: Icon }) => (
+              {ADMIN_TABS.filter(t => ["users","invites","programs","launch","feedback","stories","finance","ai_costs","health","sessions"].includes(t.key)).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
@@ -1303,6 +1305,7 @@ const Admin = () => {
         {activeTab === "finance" && <FinanceDashboard />}
         {activeTab === "ai_costs" && <AiCostMonitorPanel />}
         {activeTab === "health" && <MemberHealthPanel />}
+        {activeTab === "sessions" && <GroupSessionsAdminPanel />}
       </motion.div>
 
       <Dialog open={!!selectedNotesUserId} onOpenChange={(open) => !open && setSelectedNotesUserId(null)}>
