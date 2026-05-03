@@ -15,9 +15,16 @@ interface Props {
 
 const SUPABASE_URL = "https://bowvosskzbtuxmrwatoj.supabase.co";
 
+// Stripe publishable keys are public by design — Stripe ships them in client JS.
+// Falling back to the live key so the embedded checkout works even without
+// VITE_STRIPE_PUBLISHABLE_KEY wired into the build env. Override via env var
+// for test mode or a different account.
+const STRIPE_PK_LIVE_FALLBACK =
+  "pk_live_51PiiQ6ERaIeGwg1e9thfmXwl5clOw69hDbPriSKwI7BGjz3xVW4Hnnig47K0LCbew1aXa5udIWgPOcSWH3mteKNJ000aBgOuRP";
+
 const publishableKey = (() => {
   const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-  return env?.VITE_STRIPE_PUBLISHABLE_KEY ?? "";
+  return env?.VITE_STRIPE_PUBLISHABLE_KEY ?? STRIPE_PK_LIVE_FALLBACK;
 })();
 
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
