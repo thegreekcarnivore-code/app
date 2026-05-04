@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { useGuideHighlight } from "@/context/GuideHighlightContext";
 import { useChatContext } from "@/context/ChatContext";
-import { Send, Loader2, Sparkles, MapPin, X, ChevronLeft, MessageSquare } from "lucide-react";
+import { Send, Loader2, Sparkles, MapPin, X, ChevronLeft, MessageSquare, ExternalLink } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -266,6 +267,7 @@ const AssistantChat = ({ onMinimize }: { onMinimize?: () => void }) => {
 const AssistantBubble = ({ open, onOpenChange }: AssistantBubbleProps) => {
   const { user, isAdmin } = useAuth();
   const { lang } = useLanguage();
+  const navigate = useNavigate();
   // Admin state
   const [clients, setClients] = useState<ClientEntry[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -366,13 +368,41 @@ const AssistantBubble = ({ open, onOpenChange }: AssistantBubbleProps) => {
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                 )}
-                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-accent-foreground" />
-                </div>
-                <div>
-                  <p className="font-serif text-sm font-semibold text-foreground">{getHeaderTitle()}</p>
-                  <p className="font-sans text-[10px] text-muted-foreground">{getHeaderSub()}</p>
-                </div>
+                {isAdmin && adminView === "client-history" && selectedClient ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate(`/admin/client/${selectedClient.id}`);
+                      onOpenChange(false);
+                    }}
+                    className="flex items-center gap-2 rounded-lg p-1 -m-1 transition-colors hover:bg-muted"
+                    title={lang === "el" ? "Άνοιξε προφίλ πελάτη" : "Open client profile"}
+                  >
+                    <Avatar className="h-8 w-8">
+                      {selectedClient.avatar_url && <AvatarImage src={selectedClient.avatar_url} alt="" />}
+                      <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">
+                        {getInitial(selectedClient.display_name, selectedClient.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-left">
+                      <p className="font-serif text-sm font-semibold text-foreground inline-flex items-center gap-1">
+                        {getHeaderTitle()}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground/70" />
+                      </p>
+                      <p className="font-sans text-[10px] text-muted-foreground">{getHeaderSub()}</p>
+                    </div>
+                  </button>
+                ) : (
+                  <>
+                    <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center">
+                      <Sparkles className="h-4 w-4 text-accent-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-serif text-sm font-semibold text-foreground">{getHeaderTitle()}</p>
+                      <p className="font-sans text-[10px] text-muted-foreground">{getHeaderSub()}</p>
+                    </div>
+                  </>
+                )}
               </div>
               <button onClick={handleClose} className="rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                 <X className="h-4 w-4" />

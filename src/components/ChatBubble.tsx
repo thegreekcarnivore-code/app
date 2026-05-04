@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, ChevronLeft, Sparkles, ExternalLink } from "lucide-react";
 import MessageCheckmarks from "@/components/chat/MessageCheckmarks";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,7 @@ interface ChatBubbleProps {
 const ChatBubble = ({ open, onOpenChange, initialClientId }: ChatBubbleProps) => {
   const { user, isAdmin } = useAuth();
   const { lang } = useLanguage();
+  const navigate = useNavigate();
   const [adminId, setAdminId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [clients, setClients] = useState<ClientEntry[]>([]);
@@ -215,33 +217,47 @@ const ChatBubble = ({ open, onOpenChange, initialClientId }: ChatBubbleProps) =>
                 )}
                 {/* Header avatar */}
                 {isAdmin && selectedClient ? (
-                  <Avatar className="h-8 w-8">
-                    {selectedClient.avatar_url && <AvatarImage src={selectedClient.avatar_url} alt="" />}
-                    <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">
-                      {getInitial(selectedClient.display_name, selectedClient.email)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate(`/admin/client/${selectedClient.id}`);
+                      setOpen(false);
+                    }}
+                    className="flex items-center gap-2 rounded-lg p-1 -m-1 transition-colors hover:bg-muted"
+                    title={lang === "el" ? "Άνοιξε προφίλ πελάτη" : "Open client profile"}
+                  >
+                    <Avatar className="h-8 w-8">
+                      {selectedClient.avatar_url && <AvatarImage src={selectedClient.avatar_url} alt="" />}
+                      <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">
+                        {getInitial(selectedClient.display_name, selectedClient.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-left">
+                      <p className="font-serif text-sm font-semibold text-foreground inline-flex items-center gap-1">
+                        {selectedClient.display_name || selectedClient.email || (lang === "el" ? "Πελάτης" : "Client")}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground/70" />
+                      </p>
+                      <p className="font-sans text-[10px] text-muted-foreground">{selectedClient.email}</p>
+                    </div>
+                  </button>
                 ) : !isAdmin ? (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={logo} alt="The Greek Carnivore" />
-                    <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">A</AvatarFallback>
-                  </Avatar>
-                ) : null}
-                <div>
-                  <p className="font-serif text-sm font-semibold text-foreground">
-                    {isAdmin
-                      ? selectedClient
-                        ? selectedClient.display_name || selectedClient.email || (lang === "el" ? "Πελάτης" : "Client")
-                        : (lang === "el" ? "Μηνύματα" : "Messages")
-                      : "Alexandros"}
-                  </p>
-                  {!isAdmin && (
-                    <p className="font-sans text-[10px] text-muted-foreground">The Greek Carnivore</p>
-                  )}
-                  {isAdmin && selectedClient && (
-                    <p className="font-sans text-[10px] text-muted-foreground">{selectedClient.email}</p>
-                  )}
-                </div>
+                  <>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={logo} alt="The Greek Carnivore" />
+                      <AvatarFallback className="text-xs font-serif bg-primary/10 text-primary">A</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-serif text-sm font-semibold text-foreground">Alexandros</p>
+                      <p className="font-sans text-[10px] text-muted-foreground">The Greek Carnivore</p>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <p className="font-serif text-sm font-semibold text-foreground">
+                      {lang === "el" ? "Μηνύματα" : "Messages"}
+                    </p>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => { setOpen(false); setSelectedClientId(null); }}
